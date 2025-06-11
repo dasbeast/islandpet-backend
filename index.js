@@ -33,7 +33,7 @@ app.post('/update', (req, res) => {
 
 function pushAPNs(token, state) {
   return new Promise((resolve, reject) => {
-    const client = http2.connect('https://api.push.apple.com');
+    const client = http2.connect(APNS_HOST);
     const req = client.request({
       ':method': 'POST',
       ':path'  : `/3/device/${token}`,
@@ -51,9 +51,17 @@ function pushAPNs(token, state) {
     };
 
     req.end(JSON.stringify(payload));
-    req.on('response', h => {
-      client.close();
-      h[':status'] === 200 ? resolve() : reject(new Error(`APNs ${h[':status']}`));
+    req.on('response', headers => {
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        console.log('APNs status', headers[':status'], body);
+        client.close();
+        headers[':status'] === 200
+          ? resolve()
+          : reject(new Error(`APNs ${headers[':status']} ${body}`));
+      });
     });
   });
 }
