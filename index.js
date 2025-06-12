@@ -38,7 +38,7 @@ app.post('/register', async (req, res) => {
   console.log('→ /register body:', req.body);
   const { activityID, token, petID } = req.body;
   try {
-    await pool.query(`
+    const result = await pool.query(`
       INSERT INTO pets(activity_id, pet_id, token, hunger, happiness)
       VALUES($1, $2, $3, 0, 100)
       ON CONFLICT(activity_id) DO UPDATE
