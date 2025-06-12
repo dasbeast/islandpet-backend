@@ -35,6 +35,7 @@ app.use(express.json());
 
 
 app.post('/register', async (req, res) => {
+  console.log('→ /register body:', req.body);
   const { activityID, token, petID } = req.body;
   try {
     await pool.query(`
@@ -44,6 +45,7 @@ app.post('/register', async (req, res) => {
         SET token = EXCLUDED.token,
             pet_id = EXCLUDED.pet_id
     `, [activityID, petID, token]);
+    console.log('  INSERT result:', result.rows[0]);
     res.sendStatus(200);
   } catch (err) {
     console.error('Error in /register', err);
