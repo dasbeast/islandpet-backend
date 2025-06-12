@@ -3,6 +3,7 @@ import fs      from 'fs';
 import http2   from 'http2';
 import jwt     from 'jsonwebtoken';
 import { Pool } from 'pg';
+import cron    from 'node-cron';
 
 // Initialize Postgres pool
 const pool = new Pool({
@@ -125,3 +126,31 @@ function makeJWT() {
 }
 
 app.listen(8080, () => console.log('Backend running on :8080'))
+
+// Schedule automatic state decay every 5 minutes
+cron.schedule('*/5 * * * *', async () => {
+  console.log('⏰ Running decay job');
+  try {
+    const { rows } = await pool.query(
+      'SELECT activity_id, token, hunger, happiness FROM pets'
+    );
+    for (let pet of rows) {
+      const newHunger    = Math.min(100, pet.hunger + 1);
+      const newHappiness = Math.max(0, pet.happiness - 1);
+      // Persist new state
+      await pool.query(
+        `UPDATE pets
+           SET hunger = $1,
+               happiness = $2,
+               last_updated = NOW()
+         WHERE activity_id = $3`,
+        [newHunger, newHappiness, pet.activity_id]
+      );
+      // Push update to APNs
+      await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
+      console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
+    }
+  } catch (err) {
+    console.error('Error running decay job', err);
+  }
+});
