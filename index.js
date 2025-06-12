@@ -130,13 +130,15 @@ function makeJWT() {
 
 app.listen(8080, () => console.log('Backend running on :8080'))
 
-// Schedule automatic state decay every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
+// Schedule automatic state decay—check every minute and run when due
+cron.schedule('* * * * *', async () => {
   console.log('⏰ Running decay job');
   try {
-    const { rows } = await pool.query(
-      'SELECT activity_id, token, hunger, happiness FROM pets'
-    );
+    const { rows } = await pool.query(`
+      SELECT activity_id, token, hunger, happiness
+        FROM pets
+       WHERE NOW() - last_updated >= INTERVAL '5 minutes'
+    `);
     for (let pet of rows) {
       const newHunger    = Math.min(100, pet.hunger + 1);
       const newHappiness = Math.max(0, pet.happiness - 1);
@@ -149,9 +151,22 @@ cron.schedule('*/5 * * * *', async () => {
          WHERE activity_id = $3`,
         [newHunger, newHappiness, pet.activity_id]
       );
-      // Push update to APNs
-      await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
-      console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
+      // Push update to APNs, handling invalid tokens
+      try {
+        await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
+        console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
+      } catch (err) {
+        const msg = err.message || '';
+        if (msg.includes('BadDeviceToken')) {
+          console.log(`🚮 Removing invalid token for ${pet.activity_id}`);
+          await pool.query(
+            'DELETE FROM pets WHERE activity_id = $1',
+            [pet.activity_id]
+          );
+        } else {
+          console.error(`Error pushing to ${pet.activity_id}:`, err);
+        }
+      }
     }
   } catch (err) {
     console.error('Error running decay job', err);
