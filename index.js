@@ -2,6 +2,25 @@ import express from 'express';
 import fs      from 'fs';
 import http2   from 'http2';
 import jwt     from 'jsonwebtoken';
+import { Pool } from 'pg';
+
+// Initialize Postgres pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// Create pets table if it doesn't exist
+pool.query(`
+  CREATE TABLE IF NOT EXISTS pets (
+    activity_id   TEXT PRIMARY KEY,
+    pet_id        TEXT,
+    token         TEXT,
+    hunger        INTEGER NOT NULL,
+    happiness     INTEGER NOT NULL,
+    last_updated  TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(err => console.error('Error creating pets table', err));
 
 // decide which APNs host to use
 const APNS_HOST =
@@ -13,22 +32,52 @@ const key = fs.readFileSync(`./AuthKey_${KEY_ID}.p8`, 'utf8');
 const app = express();
 app.use(express.json());
 
-// in-memory store – swap for Postgres later
-const store = new Map();               // activityID → token
 
-app.post('/register', (req, res) => {
-  const { activityID, token } = req.body;
-  store.set(activityID, token);
-  res.sendStatus(200);
+app.post('/register', async (req, res) => {
+  const { activityID, token, petID } = req.body;
+  try {
+    await pool.query(`
+      INSERT INTO pets(activity_id, pet_id, token, hunger, happiness)
+      VALUES($1, $2, $3, 0, 100)
+      ON CONFLICT(activity_id) DO UPDATE
+        SET token = EXCLUDED.token,
+            pet_id = EXCLUDED.pet_id
+    `, [activityID, petID, token]);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /register', err);
+    res.sendStatus(500);
+  }
 });
 
-app.post('/update', (req, res) => {
+app.post('/update', async (req, res) => {
   const { activityID, state } = req.body;
-  const token = store.get(activityID);
-  if (!token) return res.status(404).end();
-  pushAPNs(token, state)
-    .then(() => res.sendStatus(200))
-    .catch(err => { console.error(err); res.sendStatus(500); });
+  try {
+    // Fetch token and existing state
+    const { rows } = await pool.query(
+      'SELECT token FROM pets WHERE activity_id = $1',
+      [activityID]
+    );
+    if (!rows.length) return res.status(404).end();
+    const token = rows[0].token;
+
+    // Send APNs push
+    await pushAPNs(token, state);
+
+    // Persist new state
+    await pool.query(`
+      UPDATE pets
+         SET hunger = $1,
+             happiness = $2,
+             last_updated = NOW()
+       WHERE activity_id = $3
+    `, [state.hunger, state.happiness, activityID]);
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /update', err);
+    res.sendStatus(500);
+  }
 });
 
 function pushAPNs(token, state) {
