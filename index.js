@@ -44,6 +44,7 @@ app.post('/register', async (req, res) => {
       ON CONFLICT(activity_id) DO UPDATE
         SET token = EXCLUDED.token,
             pet_id = EXCLUDED.pet_id
+      RETURNING *
     `, [activityID, petID, token]);
     console.log('  INSERT result:', result.rows[0]);
     res.sendStatus(200);
