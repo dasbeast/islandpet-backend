@@ -3,11 +3,11 @@ import fs      from 'fs';
 import http2   from 'http2';
 import jwt     from 'jsonwebtoken';
 import { Pool } from 'pg';
-import cron    from 'node-cron';
+
 
 // Shared decay logic for both cron and manual endpoint
 async function performDecay() {
-  console.log('⏰ Performing manual decay');
+  console.log('⏰ Perform decay function hit');
   const { rows } = await pool.query(`
     SELECT activity_id, token, hunger, happiness
       FROM pets
@@ -29,7 +29,7 @@ async function performDecay() {
       console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
     } catch (err) {
       const msg = err.message || '';
-      if (msg.includes('BadDeviceToken') || msg.includes('ExpiredToken')) {
+      if (msg.includes('BadDeviceToken') || msg.includes('ExpiredToken') || msg.includes('Unregistered')) {
         console.log(`🚮 Removing expired or invalid token for ${pet.activity_id}`);
         await pool.query(
           'DELETE FROM pets WHERE activity_id = $1',
@@ -165,17 +165,8 @@ function makeJWT() {
   });
 }
 
-app.listen(8080, () => console.log('Backend running on :8080'))
 
-// Schedule automatic state decay—check every 15 seconds and run when due
-cron.schedule('*/15 * * * * *', async () => {
-  console.log('⏰ Running decay job');
-  try {
-    await performDecay();
-  } catch (err) {
-    console.error('Error running decay job', err);
-  }
-});
+app.listen(8080, () => console.log('Backend running on :8080'))
 
 // Manual decay endpoint for GitHub Actions or external cron
 app.post('/decay', async (req, res) => {
