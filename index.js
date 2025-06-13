@@ -11,7 +11,7 @@ async function performDecay() {
   const { rows } = await pool.query(`
     SELECT activity_id, token, hunger, happiness
       FROM pets
-     WHERE NOW() - last_updated >= INTERVAL '5 minutes'
+     WHERE NOW() - last_updated >= INTERVAL '15 seconds'
   `);
   for (let pet of rows) {
     const newHunger    = Math.min(100, pet.hunger + 1);
@@ -167,8 +167,8 @@ function makeJWT() {
 
 app.listen(8080, () => console.log('Backend running on :8080'))
 
-// Schedule automatic state decay—check every minute and run when due
-cron.schedule('* * * * *', async () => {
+// Schedule automatic state decay—check every 15 seconds and run when due
+cron.schedule('*/15 * * * * *', async () => {
   console.log('⏰ Running decay job');
   try {
     await performDecay();
