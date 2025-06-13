@@ -29,8 +29,8 @@ async function performDecay() {
       console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
     } catch (err) {
       const msg = err.message || '';
-      if (msg.includes('BadDeviceToken')) {
-        console.log(`🚮 Removing invalid token for ${pet.activity_id}`);
+      if (msg.includes('BadDeviceToken') || msg.includes('ExpiredToken')) {
+        console.log(`🚮 Removing expired or invalid token for ${pet.activity_id}`);
         await pool.query(
           'DELETE FROM pets WHERE activity_id = $1',
           [pet.activity_id]
@@ -184,6 +184,22 @@ app.post('/decay', async (req, res) => {
     res.sendStatus(200);
   } catch (err) {
     console.error('Error in /decay:', err);
+    res.sendStatus(500);
+  }
+});
+
+// Endpoint to end (delete) a pet’s Live Activity record
+app.post('/end', async (req, res) => {
+  const { activityID } = req.body;
+  try {
+    await pool.query(
+      'DELETE FROM pets WHERE activity_id = $1',
+      [activityID]
+    );
+    console.log(`🗑️ Deleted pet record for activity ${activityID}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /end:', err);
     res.sendStatus(500);
   }
 });
