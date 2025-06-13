@@ -5,6 +5,43 @@ import jwt     from 'jsonwebtoken';
 import { Pool } from 'pg';
 import cron    from 'node-cron';
 
+// Shared decay logic for both cron and manual endpoint
+async function performDecay() {
+  console.log('⏰ Performing manual decay');
+  const { rows } = await pool.query(`
+    SELECT activity_id, token, hunger, happiness
+      FROM pets
+     WHERE NOW() - last_updated >= INTERVAL '5 minutes'
+  `);
+  for (let pet of rows) {
+    const newHunger    = Math.min(100, pet.hunger + 1);
+    const newHappiness = Math.max(0, pet.happiness - 1);
+    await pool.query(
+      `UPDATE pets
+         SET hunger = $1,
+             happiness = $2,
+             last_updated = NOW()
+       WHERE activity_id = $3`,
+      [newHunger, newHappiness, pet.activity_id]
+    );
+    try {
+      await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
+      console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
+    } catch (err) {
+      const msg = err.message || '';
+      if (msg.includes('BadDeviceToken')) {
+        console.log(`🚮 Removing invalid token for ${pet.activity_id}`);
+        await pool.query(
+          'DELETE FROM pets WHERE activity_id = $1',
+          [pet.activity_id]
+        );
+      } else {
+        console.error(`Error pushing to ${pet.activity_id}:`, err);
+      }
+    }
+  }
+}
+
 // Initialize Postgres pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -134,41 +171,19 @@ app.listen(8080, () => console.log('Backend running on :8080'))
 cron.schedule('* * * * *', async () => {
   console.log('⏰ Running decay job');
   try {
-    const { rows } = await pool.query(`
-      SELECT activity_id, token, hunger, happiness
-        FROM pets
-       WHERE NOW() - last_updated >= INTERVAL '5 minutes'
-    `);
-    for (let pet of rows) {
-      const newHunger    = Math.min(100, pet.hunger + 1);
-      const newHappiness = Math.max(0, pet.happiness - 1);
-      // Persist new state
-      await pool.query(
-        `UPDATE pets
-           SET hunger = $1,
-               happiness = $2,
-               last_updated = NOW()
-         WHERE activity_id = $3`,
-        [newHunger, newHappiness, pet.activity_id]
-      );
-      // Push update to APNs, handling invalid tokens
-      try {
-        await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
-        console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
-      } catch (err) {
-        const msg = err.message || '';
-        if (msg.includes('BadDeviceToken')) {
-          console.log(`🚮 Removing invalid token for ${pet.activity_id}`);
-          await pool.query(
-            'DELETE FROM pets WHERE activity_id = $1',
-            [pet.activity_id]
-          );
-        } else {
-          console.error(`Error pushing to ${pet.activity_id}:`, err);
-        }
-      }
-    }
+    await performDecay();
   } catch (err) {
     console.error('Error running decay job', err);
+  }
+});
+
+// Manual decay endpoint for GitHub Actions or external cron
+app.post('/decay', async (req, res) => {
+  try {
+    await performDecay();
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /decay:', err);
+    res.sendStatus(500);
   }
 });
