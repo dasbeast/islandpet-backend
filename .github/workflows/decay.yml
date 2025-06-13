@@ -1,8 +1,8 @@
 name: "Pet Decay (Testing)"
 
 on:
-  schedule:
-    - cron: '*/1 * * * *'    # runs every minute
+  #schedule:
+    #- cron: '*/1 * * * *'    # runs every minute
   workflow_dispatch:        # manual trigger
 
 jobs:
