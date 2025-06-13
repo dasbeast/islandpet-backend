@@ -12,7 +12,7 @@ jobs:
       - name: "Trigger decay loop every 15s (4 iterations)"
         run: |
           # Replace <YOUR_BACKEND_URL> with your actual endpoint
-          BACKEND_URL="https://island-pet.onrender.com/decay"
+          BACKEND_URL="https://islandpet-backend.onrender.com/decay"
           for i in {1..4}; do
             echo "📡 [Iteration $i] POST $BACKEND_URL"
             curl -X POST "$BACKEND_URL"
