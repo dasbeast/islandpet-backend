@@ -139,6 +139,16 @@ function pushAPNs(token, state) {
   console.log('Generated JWT token:', jwtToken);
   console.log('Decoded JWT header:', decoded.header);
   console.log('Decoded JWT payload:', decoded.payload);
+  // verify JWT locally before sending
+  try {
+    const verified = jwt.verify(jwtToken, key, {
+      algorithms: ['ES256'],
+      issuer: TEAM_ID
+    });
+    console.log('✅ JWT locally verified:', verified);
+  } catch (verificationError) {
+    console.error('❌ JWT verification error:', verificationError);
+  }
   return new Promise((resolve, reject) => {
     const client = http2.connect(APNS_HOST);
     const req = client.request({
