@@ -61,11 +61,18 @@ pool.query(`
 `).catch(err => console.error('Error creating pets table', err));
 
 // decide which APNs host to use
-const APNS_HOST =
-  process.env.APNS_ENV === 'production'
-    ? 'https://api.push.apple.com'          // release builds
-    : 'https://api.sandbox.push.apple.com'; // debug builds
+// Use sandbox only when APNS_ENV is explicitly 'sandbox'; treat TestFlight and production builds as production.
+const APNS_HOST = process.env.APNS_ENV === 'sandbox'
+  ? 'https://api.sandbox.push.apple.com'
+  : 'https://api.push.apple.com';
 const { TEAM_ID, KEY_ID, BUNDLE_ID } = process.env;
+console.log('ENV VARS:', {
+  APNS_ENV: process.env.APNS_ENV,
+  APNS_HOST,
+  TEAM_ID,
+  KEY_ID,
+  BUNDLE_ID
+});
 const key = fs.readFileSync(`./AuthKey_${KEY_ID}.p8`, 'utf8');
 const app = express();
 app.use(express.json());
@@ -122,6 +129,16 @@ app.post('/update', async (req, res) => {
 });
 
 function pushAPNs(token, state) {
+  console.log('pushAPNs called:', {
+    host: APNS_HOST,
+    deviceToken: token,
+    topic: `${BUNDLE_ID}.push-type.liveactivity`
+  });
+  const jwtToken = makeJWT();
+  const decoded = jwt.decode(jwtToken, { complete: true });
+  console.log('Generated JWT token:', jwtToken);
+  console.log('Decoded JWT header:', decoded.header);
+  console.log('Decoded JWT payload:', decoded.payload);
   return new Promise((resolve, reject) => {
     const client = http2.connect(APNS_HOST);
     const req = client.request({
@@ -129,7 +146,7 @@ function pushAPNs(token, state) {
       ':path'  : `/3/device/${token}`,
       'apns-topic'    : `${BUNDLE_ID}.push-type.liveactivity`,
       'apns-push-type': 'liveactivity',
-      authorization   : `Bearer ${makeJWT()}`
+      authorization   : `Bearer ${jwtToken}`
     });
 
     const payload = {
