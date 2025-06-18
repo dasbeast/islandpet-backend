@@ -7,21 +7,40 @@ import { Pool } from 'pg';
 
 // Shared decay logic for both cron and manual endpoint
 async function performDecay() {
-  console.log('⏰ Perform decay function hit');
+  // Expire sessions older than 12 hours
+  const expired = await pool.query(
+    `DELETE FROM pet_sessions
+      WHERE created_at < NOW() - INTERVAL '12 hours'
+      RETURNING activity_id`
+  );
+  expired.rows.forEach(r => console.log(`🗑️ Removed expired session ${r.activity_id}`));
+
+  // Decay persistent pet state
+  await pool.query(
+    `UPDATE pet_states
+       SET hunger       = LEAST(100, hunger + 1),
+           happiness    = GREATEST(0, happiness - 1),
+           last_updated = NOW()
+     WHERE NOW() - last_updated >= INTERVAL '15 seconds'`
+  );
+
+  // Get active sessions and current state for pushes
   const { rows } = await pool.query(`
-    SELECT activity_id, token, hunger, happiness
-      FROM pets
-     WHERE NOW() - last_updated >= INTERVAL '15 seconds'
+    SELECT ps.activity_id, ps.token, s.hunger, s.happiness
+      FROM pet_sessions ps
+      JOIN pet_states s ON s.pet_id = ps.pet_id
   `);
   for (let pet of rows) {
     const newHunger    = Math.min(100, pet.hunger + 1);
     const newHappiness = Math.max(0, pet.happiness - 1);
     await pool.query(
-      `UPDATE pets
+      `UPDATE pet_states
          SET hunger = $1,
              happiness = $2,
              last_updated = NOW()
-       WHERE activity_id = $3`,
+       WHERE pet_id = (
+         SELECT pet_id FROM pet_sessions WHERE activity_id = $3
+       )`,
       [newHunger, newHappiness, pet.activity_id]
     );
     try {
@@ -32,7 +51,7 @@ async function performDecay() {
       if (msg.includes('BadDeviceToken') || msg.includes('ExpiredToken') || msg.includes('Unregistered')) {
         console.log(`🚮 Removing expired or invalid token for ${pet.activity_id}`);
         await pool.query(
-          'DELETE FROM pets WHERE activity_id = $1',
+          'DELETE FROM pet_sessions WHERE activity_id = $1',
           [pet.activity_id]
         );
       } else {
@@ -48,17 +67,28 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Create pets table if it doesn't exist
+// Create persistent pet state table
 pool.query(`
-  CREATE TABLE IF NOT EXISTS pets (
-    activity_id   TEXT PRIMARY KEY,
-    pet_id        TEXT,
-    token         TEXT,
-    hunger        INTEGER NOT NULL,
-    happiness     INTEGER NOT NULL,
-    last_updated  TIMESTAMPTZ DEFAULT NOW()
+  CREATE TABLE IF NOT EXISTS pet_states (
+    pet_id       TEXT PRIMARY KEY,
+    species_id   TEXT NOT NULL,
+    hunger       INTEGER NOT NULL DEFAULT 0,
+    happiness    INTEGER NOT NULL DEFAULT 100,
+    last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )
-`).catch(err => console.error('Error creating pets table', err));
+`).catch(err => console.error('Error creating pet_states table', err));
+
+// Create ephemeral pet session table
+pool.query(`
+  CREATE TABLE IF NOT EXISTS pet_sessions (
+    activity_id TEXT PRIMARY KEY,
+    pet_id      TEXT NOT NULL REFERENCES pet_states(pet_id),
+    species_id  TEXT NOT NULL,
+    token       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(pet_id)
+  )
+`).catch(err => console.error('Error creating pet_sessions table', err));
 
 // decide which APNs host to use
 // Use sandbox only when APNS_ENV is explicitly 'sandbox'; treat TestFlight and production builds as production.
@@ -80,16 +110,26 @@ app.use(express.json());
 
 app.post('/register', async (req, res) => {
   console.log('→ /register body:', req.body);
-  const { activityID, token, petID } = req.body;
+  const { activityID, token, petID, speciesID } = req.body;
   try {
+    // Ensure persistent pet state exists
+    await pool.query(
+      `INSERT INTO pet_states(pet_id, species_id, hunger, happiness)
+       VALUES($1, $2, 0, 100)
+       ON CONFLICT(pet_id) DO NOTHING`,
+      [petID, speciesID]
+    );
+    // Upsert session
     const result = await pool.query(`
-      INSERT INTO pets(activity_id, pet_id, token, hunger, happiness)
-      VALUES($1, $2, $3, 0, 100)
-      ON CONFLICT(activity_id) DO UPDATE
-        SET token = EXCLUDED.token,
-            pet_id = EXCLUDED.pet_id
+      INSERT INTO pet_sessions(activity_id, pet_id, species_id, token)
+      VALUES($1, $2, $3, $4)
+      ON CONFLICT(pet_id) DO UPDATE
+        SET activity_id = EXCLUDED.activity_id,
+            species_id  = EXCLUDED.species_id,
+            token       = EXCLUDED.token,
+            created_at  = NOW()
       RETURNING *
-    `, [activityID, petID, token]);
+    `, [activityID, petID, speciesID, token]);
     console.log('  INSERT result:', result.rows[0]);
     res.sendStatus(200);
   } catch (err) {
@@ -103,7 +143,7 @@ app.post('/update', async (req, res) => {
   try {
     // Fetch token and existing state
     const { rows } = await pool.query(
-      'SELECT token FROM pets WHERE activity_id = $1',
+      'SELECT token FROM pet_sessions WHERE activity_id = $1',
       [activityID]
     );
     if (!rows.length) return res.status(404).end();
@@ -114,11 +154,13 @@ app.post('/update', async (req, res) => {
 
     // Persist new state
     await pool.query(`
-      UPDATE pets
-         SET hunger = $1,
-             happiness = $2,
+      UPDATE pet_states
+         SET hunger       = $1,
+             happiness    = $2,
              last_updated = NOW()
-       WHERE activity_id = $3
+       WHERE pet_id = (
+         SELECT pet_id FROM pet_sessions WHERE activity_id = $3
+       )
     `, [state.hunger, state.happiness, activityID]);
 
     res.sendStatus(200);
@@ -211,7 +253,7 @@ app.post('/end', async (req, res) => {
   const { activityID } = req.body;
   try {
     await pool.query(
-      'DELETE FROM pets WHERE activity_id = $1',
+      'DELETE FROM pet_sessions WHERE activity_id = $1',
       [activityID]
     );
     console.log(`🗑️ Deleted pet record for activity ${activityID}`);
@@ -220,4 +262,16 @@ app.post('/end', async (req, res) => {
     console.error('Error in /end:', err);
     res.sendStatus(500);
   }
+});
+
+app.get('/pets/:petID', async (req, res) => {
+  const { petID } = req.params;
+  const { rows } = await pool.query(
+    `SELECT pet_id AS "petID", species_id AS "speciesID", hunger, happiness, last_updated
+       FROM pet_states
+      WHERE pet_id = $1`,
+    [petID]
+  );
+  if (!rows.length) return res.status(404).end();
+  res.json(rows[0]);
 });
