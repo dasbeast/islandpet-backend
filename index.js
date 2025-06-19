@@ -172,6 +172,28 @@ app.post('/register/token', async (req, res) => {
   }
 });
 
+// Endpoint to rename an existing session's activity_id
+app.patch('/register/rename-session', async (req, res) => {
+  const { oldActivityID, newActivityID } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE pet_sessions
+         SET activity_id = $1
+       WHERE activity_id = $2`,
+      [newActivityID, oldActivityID]
+    );
+    if (!result.rowCount) {
+      console.log(`⚠️ No session found to rename from ${oldActivityID} to ${newActivityID}`);
+      return res.sendStatus(404);
+    }
+    console.log(`🔄 Renamed session ${oldActivityID} → ${newActivityID}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /register/rename-session', err);
+    res.sendStatus(500);
+  }
+});
+
 app.post('/update', async (req, res) => {
   const { activityID, state } = req.body;
   try {
