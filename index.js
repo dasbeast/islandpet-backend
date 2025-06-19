@@ -138,6 +138,34 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// Endpoint to update just the APNs token for an existing session
+app.post('/register/token', async (req, res) => {
+  console.log('→ /register/token body:', req.body);
+  const { activityID, token } = req.body;
+
+  try {
+    // Update only the token for the given activity
+    const result = await pool.query(
+      `UPDATE pet_sessions
+         SET token = $1
+       WHERE activity_id = $2
+       RETURNING pet_id`,
+      [token, activityID]
+    );
+
+    if (!result.rowCount) {
+      console.log(`⚠️ No session found for activity ${activityID}`);
+      return res.sendStatus(404);
+    }
+
+    console.log(`✅ Updated token for session ${activityID}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in /register/token', err);
+    res.sendStatus(500);
+  }
+});
+
 app.post('/update', async (req, res) => {
   const { activityID, state } = req.body;
   try {
