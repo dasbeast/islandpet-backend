@@ -26,11 +26,16 @@ async function performDecay() {
 
   // Get active sessions and current state for pushes
   const { rows } = await pool.query(`
-    SELECT ps.activity_id, ps.token, s.hunger, s.happiness
+    SELECT ps.activity_id, ps.pet_id, ps.token, s.hunger, s.happiness
       FROM pet_sessions ps
       JOIN pet_states s ON s.pet_id = ps.pet_id
   `);
   for (let pet of rows) {
+    console.log(`🔎 Session ${pet.activity_id} for petID ${pet.pet_id}, token: "${pet.token}"`);
+    if (!pet.token) {
+      console.log(`⚠️ Skipping push for session ${pet.activity_id}, petID ${pet.pet_id}, token: "${pet.token}"`);
+      continue;
+    }
     const newHunger    = Math.min(100, pet.hunger + 1);
     const newHappiness = Math.max(0, pet.happiness - 1);
     await pool.query(
@@ -43,6 +48,7 @@ async function performDecay() {
        )`,
       [newHunger, newHappiness, pet.activity_id]
     );
+    console.log(`🐾 Pushing for session ${pet.activity_id}, petID ${pet.pet_id}, token: "${pet.token}"`);
     try {
       await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
       console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
