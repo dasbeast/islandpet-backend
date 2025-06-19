@@ -291,6 +291,19 @@ function makeJWT() {
 }
 
 
+
+// Debug endpoint to clear pet_sessions and pet_states tables
+app.post('/debug/clear-tables', async (req, res) => {
+  try {
+    await pool.query('TRUNCATE TABLE pet_sessions, pet_states RESTART IDENTITY CASCADE');
+    console.log('⚠️ Debug: cleared pet_sessions and pet_states tables');
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error clearing tables:', err);
+    res.sendStatus(500);
+  }
+});
+
 app.listen(8080, () => console.log('Backend running on :8080'))
 
 // Manual decay endpoint for GitHub Actions or external cron
