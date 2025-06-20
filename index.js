@@ -339,6 +339,28 @@ app.post('/end', async (req, res) => {
   }
 });
 
+// Endpoint to delete all data for a specific pet (session and state)
+app.delete('/pets/:petID', async (req, res) => {
+  const { petID } = req.params;
+  try {
+    // Remove the session for this pet
+    await pool.query(
+      'DELETE FROM pet_sessions WHERE pet_id = $1',
+      [petID]
+    );
+    // Remove the persistent state for this pet
+    await pool.query(
+      'DELETE FROM pet_states WHERE pet_id = $1',
+      [petID]
+    );
+    console.log(`🗑️ Completely removed pet data for petID ${petID}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error in DELETE /pets/:petID', err);
+    res.sendStatus(500);
+  }
+});
+
 app.get('/pets/:petID', async (req, res) => {
   const { petID } = req.params;
   const { rows } = await pool.query(
