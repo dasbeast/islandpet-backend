@@ -201,30 +201,42 @@ app.patch('/register/rename-session', async (req, res) => {
 });
 
 app.post('/update', async (req, res) => {
-  const { activityID, state } = req.body;
+  const { petID, state } = req.body;
   try {
-    // Fetch token and existing state
-    const { rows } = await pool.query(
-      'SELECT token FROM pet_sessions WHERE activity_id = $1',
-      [activityID]
-    );
-    if (!rows.length) return res.status(404).end();
-    const token = rows[0].token;
-
-    // Send APNs push
-    await pushAPNs(token, state);
-
-    // Persist new state
-    await pool.query(`
-      UPDATE pet_states
+    // 1. Persist new state in the database for this pet
+    await pool.query(
+      `UPDATE pet_states
          SET hunger       = $1,
              happiness    = $2,
              last_updated = NOW()
-       WHERE pet_id = (
-         SELECT pet_id FROM pet_sessions WHERE activity_id = $3
-       )
-    `, [state.hunger, state.happiness, activityID]);
+       WHERE pet_id = $3`,
+      [state.hunger, state.happiness, petID]
+    );
 
+    // 2. Fetch all active Live-Activity sessions for this pet
+    const { rows: sessions } = await pool.query(
+      `SELECT activity_id, token
+         FROM pet_sessions
+        WHERE pet_id = $1`,
+      [petID]
+    );
+
+    // 3. Push updates to any Live Activity session that has a token
+    for (let sess of sessions) {
+      if (!sess.token) {
+        console.log(`⚠️ Skipping push for session ${sess.activity_id}: no token`);
+        continue;
+      }
+      console.log(`🐾 Pushing update for session ${sess.activity_id}`);
+      try {
+        await pushAPNs(sess.token, state);
+        console.log(`🐾 Pushed state to ${sess.activity_id}`);
+      } catch (err) {
+        console.error(`Error pushing to ${sess.activity_id}:`, err);
+      }
+    }
+
+    // 4. Respond OK
     res.sendStatus(200);
   } catch (err) {
     console.error('Error in /update', err);
