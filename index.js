@@ -41,23 +41,23 @@ async function performDecay() {
       console.log(`⚠️ Skipping push for session ${pet.activity_id}, petID ${pet.pet_id}, token: "${pet.token}"`);
       continue;
     }
-    const newHunger    = Math.min(100, pet.hunger + 1);
-    const newHappiness = Math.max(0, pet.happiness - 1);
-    console.log(`🗓️ Decaying petID ${pet.pet_id} (activity ${pet.activity_id}): hunger ${pet.hunger} → ${newHunger}, happiness ${pet.happiness} → ${newHappiness}`);
-    await pool.query(
-      `UPDATE pet_states
-         SET hunger = $1,
-             happiness = $2,
-             last_updated = NOW()
-       WHERE pet_id = (
-         SELECT pet_id FROM pet_sessions WHERE activity_id = $3
-       )`,
-      [newHunger, newHappiness, pet.activity_id]
-    );
+    //const newHunger    = Math.min(100, pet.hunger + 1);
+    //const newHappiness = Math.max(0, pet.happiness - 1);
+    //console.log(`🗓️ Decaying petID ${pet.pet_id} (activity ${pet.activity_id}): hunger ${pet.hunger} → ${newHunger}, happiness ${pet.happiness} → ${newHappiness}`);
+    //await pool.query(
+    //  `UPDATE pet_states
+     //    SET hunger = $1,
+        //     happiness = $2,
+       //      last_updated = NOW()
+      // WHERE pet_id = (
+      //   SELECT pet_id FROM pet_sessions WHERE activity_id = $3
+      // )`,
+     // [newHunger, newHappiness, pet.activity_id]
+    //);
     console.log(`🐾 Pushing for session ${pet.activity_id}, petID ${pet.pet_id}, token: "${pet.token}"`);
     try {
-      await pushAPNs(pet.token, { hunger: newHunger, happiness: newHappiness });
-      console.log(`🐾 Updated ${pet.activity_id}: hunger=${newHunger}, happiness=${newHappiness}`);
+        await pushAPNs(pet.token, { hunger: pet.hunger, happiness: pet.happiness });
+        console.log(`🐾 Updated ${pet.activity_id}: hunger=${pet.hunger}, happiness=${pet.happiness}`);
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('BadDeviceToken') || msg.includes('ExpiredToken') || msg.includes('Unregistered')) {
