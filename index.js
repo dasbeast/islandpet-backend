@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 
 // Shared decay logic for both cron and manual endpoint
 async function performDecay() {
+  console.log(`⚙️ performDecay triggered at ${new Date().toISOString()}`);
   // Expire sessions older than 12 hours
   const expired = await pool.query(
     `DELETE FROM pet_sessions
@@ -16,13 +17,17 @@ async function performDecay() {
   expired.rows.forEach(r => console.log(`🗑️ Removed expired session ${r.activity_id}`));
 
   // Decay persistent pet state
-  await pool.query(
+  const { rows: decayedPets } = await pool.query(
     `UPDATE pet_states
        SET hunger       = LEAST(100, hunger + 1),
            happiness    = GREATEST(0, happiness - 1),
            last_updated = NOW()
-     WHERE NOW() - last_updated >= INTERVAL '15 seconds'`
+     WHERE NOW() - last_updated >= INTERVAL '15 seconds'
+     RETURNING pet_id, hunger, happiness`
   );
+  decayedPets.forEach(petState => {
+    console.log(`🗓️ Global decay petID ${petState.pet_id}: new hunger ${petState.hunger}, new happiness ${petState.happiness}`);
+  });
 
   // Get active sessions and current state for pushes
   const { rows } = await pool.query(`
@@ -38,6 +43,7 @@ async function performDecay() {
     }
     const newHunger    = Math.min(100, pet.hunger + 1);
     const newHappiness = Math.max(0, pet.happiness - 1);
+    console.log(`🗓️ Decaying petID ${pet.pet_id} (activity ${pet.activity_id}): hunger ${pet.hunger} → ${newHunger}, happiness ${pet.happiness} → ${newHappiness}`);
     await pool.query(
       `UPDATE pet_states
          SET hunger = $1,
