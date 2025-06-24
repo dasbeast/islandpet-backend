@@ -6,6 +6,7 @@ import config from '../config/index.js';
 const key = fs.readFileSync(`./AuthKey_${config.keyId}.p8`, 'utf8');
 
 function makeJWT() {
+    console.log('[apnsService] makeJWT: generating JWT');
     return jwt.sign({}, key, {
         algorithm: 'ES256',
         issuer:    config.teamId,
@@ -15,6 +16,7 @@ function makeJWT() {
 }
 
 export async function pushToAPNs(token, state) {
+    console.log('[apnsService] pushToAPNs called with token:', token, 'state:', state);
     const jwtToken = makeJWT();
     const client = http2.connect(
         config.apnsEnv === 'sandbox'
@@ -41,8 +43,10 @@ export async function pushToAPNs(token, state) {
         let body = '';
         req.on('response', headers => {
             req.setEncoding('utf8');
+            console.log('[apnsService] APNs response headers:', headers);
             req.on('data', chunk => body += chunk);
             req.on('end', () => {
+                console.log('[apnsService] APNs response body:', body);
                 client.close();
                 headers[':status'] === 200
                     ? resolve()
