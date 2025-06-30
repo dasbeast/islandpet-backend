@@ -1,20 +1,97 @@
-# Node
-/node_modules/
+# ================================================
+# IslandPet Monorepo .gitignore
+# This file ignores build artifacts, dependencies,
+# logs, and IDE/OS specific files for both
+# Frontend (Xcode) and Backend (Node.js) components.
+# ================================================
 
-# Env files
-.env
+# ------------------------------------------------
+# 1. Node.js Backend Specific Ignores
+# Located in the 'islandpet-backend/' directory
+# ------------------------------------------------
 
-# Auth keys
-AuthKey_*.p8
+# Dependency directories
+/islandpet-backend/node_modules/
+/islandpet-backend/build/      # Common for compiled JS, TypeScript output
+/islandpet-backend/dist/       # Common for compiled JS, TypeScript output
 
 # Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+/islandpet-backend/npm-debug.log*
+/islandpet-backend/yarn-debug.log*
+/islandpet-backend/yarn-error.log*
+/islandpet-backend/logs/        # General log directory
 
-# IDEs
-.idea/
-.vscode/
+# Environment variables (sensitive data)
+/islandpet-backend/.env
+/islandpet-backend/.env.* # E.g., .env.development, .env.production
 
-# Mac
+# Auth keys (your specific .p8 key should be here)
+# Make sure this specific file is not committed as it's sensitive.
+/islandpet-backend/AuthKey_*.p8
+
+# ------------------------------------------------
+# 2. Xcode (iOS) Frontend Specific Ignores
+# Located in the 'islandPet-frontend/' directory
+# ------------------------------------------------
+
+# Xcode DerivedData and Build Products
+# DerivedData stores all build artifacts, intermediate files, and indexing data.
+/islandPet-frontend/DerivedData/
+/islandPet-frontend/build/             # Sometimes build output ends up here
+/islandPet-frontend/*.xcarchive/
+/islandPet-frontend/*.ipa/
+/islandPet-frontend/*.app/
+
+# User-specific Xcode files (contain preferences, breakpoints, etc.)
+# These should NEVER be committed as they are unique to each developer.
+/islandPet-frontend/*.xcodeproj/xcuserdata/
+/islandPet-frontend/*.xcworkspace/xcuserdata/
+
+# Swift Package Manager (SPM) generated files
+# If you're using SPM for dependencies, its build artifacts and caches.
+/islandPet-frontend/.build/
+/islandPet-frontend/.swiftpm/
+
+# CocoaPods (if used for dependency management)
+# This directory contains downloaded and built third-party libraries.
+# You commit Podfile and Podfile.lock, but not the 'Pods' directory itself.
+/islandPet-frontend/Pods/
+
+# Interface Builder auto-generated content (less common but can appear)
+/islandPet-frontend/IBAnimatable.framework
+/islandPet-frontend/ibdesignables.json
+
+# Crash reports and diagnostics
+/islandPet-frontend/*.crash
+
+# Caches
+/islandPet-frontend/.swiftlint.yml.cache # Example for SwiftLint cache
+
+# Xcode Server (if used for CI/CD)
+/islandPet-frontend/*.xcworkspace/xcshareddata/xcschemes/
+/islandPet-frontend/*.xcodeproj/xcshareddata/xcschemes/
+
+# ------------------------------------------------
+# 3. IDE and OS Specific Ignores (Global for Monorepo)
+# These apply to any directory within the repository.
+# ------------------------------------------------
+
+# macOS specific files
 .DS_Store
+.localized
+.Spotlight-V100
+.Trashes
+Icon?
+
+# IDE specific files (VS Code, IntelliJ/WebStorm)
+.idea/             # IntelliJ/WebStorm project files
+.vscode/           # VS Code settings and launch configurations
+*.iml              # IntelliJ module files
+
+# Common temporary or system files
+*.log              # Generic log files
+*.tmp
+*.swp              # Vim swap files
+*~                 # Emacs backup files
+
+

@@ -1,0 +1,55 @@
+{
+  "images" : [
+    {
+      "filename" : "winniesmall.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "winnie 3.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "winniesmall 3.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    },
+    {
+      "idiom" : "iphone",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "winniesmall 4.png",
+      "idiom" : "iphone",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "winniesmall 5.png",
+      "idiom" : "iphone",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "winniesmall 1.png",
+      "idiom" : "car",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "winniesmall 6.png",
+      "idiom" : "car",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "winniesmall 2.png",
+      "idiom" : "watch",
+      "scale" : "2x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
+  "properties" : {
+    "template-rendering-intent" : "original"
+  }
+}

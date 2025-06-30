@@ -1,6 +1,0 @@
-All Rights Reserved © 2025 Bailey Kiehl
-
-This software and any associated documentation files (the “Software”) are the exclusive property of Bailey Kiehl.
-No part of the Software may be reproduced, distributed, transmitted, published, displayed, broadcast, sold, licensed, copied, modified, or otherwise exploited for any purpose without the prior written permission of Bailey Kiehl.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL BAILEY KIEHL BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS HEREIN.

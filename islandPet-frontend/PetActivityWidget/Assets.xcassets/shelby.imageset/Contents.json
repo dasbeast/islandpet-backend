@@ -1,0 +1,50 @@
+{
+  "images" : [
+    {
+      "filename" : "shelby.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "shelby 4.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "shelby 5.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "shelby 1.png",
+      "idiom" : "iphone",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "iphone",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "iphone",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "shelby 2.png",
+      "idiom" : "car",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "car",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "shelby 3.png",
+      "idiom" : "watch",
+      "scale" : "2x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
