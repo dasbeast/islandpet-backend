@@ -1,8 +1,11 @@
 import express from 'express';
+import morgan from 'morgan';
 import routes  from './src/routes/index.js';
 import { logger } from './src/utils/logger.js';
 
 const app = express();
+console.log('[app] Express application initialized');
+app.use(morgan(':method :url :status :response-time ms'));
 app.use(express.json());
 app.use('/', routes);
 
