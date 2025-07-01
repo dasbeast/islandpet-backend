@@ -29,14 +29,13 @@ struct PetSelectionView: View {
                     pet.image
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: 220, maxHeight: 220)
+                        .frame(maxWidth: 250, maxHeight: 250)
                         .tag(pet)
-                        .padding()
+                        .padding(.bottom, 40)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .frame(height: 300)
-            .padding(.bottom, 20)
 
             Text(selection.name)
                 .font(.title2.bold())

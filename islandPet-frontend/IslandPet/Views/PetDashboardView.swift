@@ -20,19 +20,13 @@ struct PetDashboardView: View {
                 VStack(spacing: 12) {
                     Text("Island Pet – \(pet.name)")
                         .font(.largeTitle.bold())
-                    Text("Take care of \(pet.name) right from the Dynamic Island!")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
                 }
 
                 // MARK: – Pet portrait
                 Image(pet.assetName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 160, height: 160)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 2))
+                    .frame(width: 250, height: 250)
                     .shadow(radius: 10)
 
                 // MARK: – Stats card
@@ -91,20 +85,30 @@ struct PetDashboardView: View {
             }
             .padding(24)
         }
-        .onAppear {
-            print("🐞 PetDashboardView onAppear - hunger:", hunger, "happiness:", happiness)
-            Task {
-                do {
-                    let initial = try await Network.fetchPetState(petID: storedPetID)
-                    await MainActor.run {
-                        hunger = initial.hunger
-                        happiness = initial.happiness
+        .task {
+                    // When the view appears, check for any existing Live Activities
+                    // for this specific pet and reconnect to it.
+                    for activity in Activity<PetAttributes>.activities {
+                        if activity.attributes.petID == pet.id {
+                            await MainActor.run {
+                                currentActivity = activity
+                            }
+                            break // Found the activity, no need to check others
+                        }
                     }
-                } catch {
-                    print("❌ fetchPetState error:", error)
+                    
+                    // Then, fetch the initial state from the network.
+                    // This combines the logic from the old .onAppear block.
+                    do {
+                        let initial = try await Network.fetchPetState(petID: storedPetID)
+                        await MainActor.run {
+                            hunger = initial.hunger
+                            happiness = initial.happiness
+                        }
+                    } catch {
+                        print("❌ fetchPetState error:", error)
+                    }
                 }
-            }
-        }
         .onChange(of: currentActivity?.content.state) { newState in
             if let state = newState {
                 print("🔄 onChange currentActivity content.state → hunger:", state.hunger, "happiness:", state.happiness)

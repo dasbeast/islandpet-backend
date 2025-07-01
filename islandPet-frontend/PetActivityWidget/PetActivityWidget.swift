@@ -4,23 +4,71 @@ import UIKit
 import ActivityKit
 import AppIntents
 
-@main
-struct PetActivityWidget: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: PetAttributes.self) { context in
-            // Lock‑screen / notification banner UI
+// A helper view to contain the logic for switching between widget families.
+struct PetActivityView: View {
+    // This environment variable lets us check where the widget is being displayed.
+    @Environment(\.activityFamily) var activityFamily
+    let context: ActivityViewContext<PetAttributes>
+
+    var body: some View {
+        // This is the main view for the Lock Screen.
+        // We'll use a switch statement to provide a different, non-interactive
+        // view specifically for the Apple Watch.
+        switch activityFamily {
+        case .small:
+            // This custom view will be used for the Apple Watch Smart Stack.
+            // It's non-interactive and only shows the pet.
+            HStack(spacing: 10) {
+                            let imageName = context.attributes.speciesID
+                            let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 75, height: 75)
+                            
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Button(intent: PlayPetIntent(
+                                        petID: context.attributes.petID,
+                                        hunger: context.state.hunger,
+                                        happiness: context.state.happiness,
+                                        speciesID: context.attributes.speciesID
+                                        )
+                                    ) {
+                                       Image(systemName: "heart.fill")
+                                    }
+                                    .tint(.mint.opacity(0.8))
+                                    
+                                    Text("\(context.state.happiness)%")
+                                        .font(.caption)
+                                }
+                                HStack {
+                                    Button(intent: FeedPetIntent(
+                                        petID: context.attributes.petID,
+                                        hunger: context.state.hunger,
+                                        happiness: context.state.happiness,
+                                        speciesID: context.attributes.speciesID
+                                        )
+                                    ) {
+                                        Image(systemName: "fork.knife")
+                                    }
+                                    .tint(.pink.opacity(0.8))
+                                    Text("\(context.state.hunger)%")
+                                        .font(.caption)
+                                }
+                            }
+                        }
+        default:
+            // This is the standard Lock Screen view for the iPhone.
             let imageName = context.attributes.speciesID
             let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
             HStack(alignment: .center, spacing: 12) {
-                // Big pet image on the left (dynamic asset)
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
 
-                // Right‑hand column with name, stats, and buttons
                 VStack(alignment: .leading, spacing: 6) {
-                    // Top row: centered name with Play button on the right
                     HStack {
                         Text(context.attributes.speciesID.capitalized)
                             .font(.headline)
@@ -38,12 +86,11 @@ struct PetActivityWidget: Widget {
                             }
                             .font(.subheadline)
                             .tint(.mint)
-                            .frame(minWidth: 100)          // uniform width
+                            .frame(minWidth: 100)
                         }
                     }
                     .padding(.top, 20)
 
-                    // Middle rows: progress bars
                     VStack(alignment: .leading, spacing: 4) {
                         statRow(
                             title: "Happiness",
@@ -57,7 +104,6 @@ struct PetActivityWidget: Widget {
                         )
                     }
 
-                    // Bottom row: Feed button aligned to trailing
                     HStack {
                         Spacer()
                         if #available(iOS 16.1, *) {
@@ -73,18 +119,28 @@ struct PetActivityWidget: Widget {
                             }
                             .font(.subheadline)
                             .tint(.pink)
-                            .frame(minWidth: 100)          // uniform width
+                            .frame(minWidth: 100)
                         }
                     }
                     .padding(.bottom, 20)
                 }
                 .padding(.trailing, 12)
             }
-            .activityBackgroundTint(Color.black.opacity(0.45))   // semi‑transparent frosted glass
+            .activityBackgroundTint(Color.black.opacity(0.45))
             .activitySystemActionForegroundColor(.black)
+        }
+    }
+}
+
+
+@main
+struct PetActivityWidget: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: PetAttributes.self) { context in
+            // Use the helper view to render the correct UI.
+            PetActivityView(context: context)
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded regions
                 DynamicIslandExpandedRegion(.leading) {
                     let imageName = context.attributes.speciesID
                     let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
@@ -99,13 +155,13 @@ struct PetActivityWidget: Widget {
                             title: "Happiness",
                             value: context.state.happiness,
                             tint: .mint,
-                            barWidth: 80               // narrower
+                            barWidth: 80
                         )
                         statRow(
                             title: "Hunger",
                             value: context.state.hunger,
                             tint: .pink,
-                            barWidth: 80               // narrower
+                            barWidth: 80
                         )
                     }
                 }
@@ -136,43 +192,20 @@ struct PetActivityWidget: Widget {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 35, height: 25)
-                    
-                
             } compactTrailing: {
-                HStack(spacing: 2) {
-                                    // Combine hunger and happiness for more info at a glance
-                    Image(systemName: "heart.fill")
-                                           .font(.system(size: 10))
-                                           .foregroundStyle(.mint)
-                                       Text("\(context.state.happiness)%")
-                                           .font(.caption2)
-                                           .foregroundStyle(.mint)
-                                       Image(systemName: "fork.knife")
-                                           .font(.system(size: 10))
-                                           .foregroundStyle(.pink)
-                                       Text("\(context.state.hunger)%")
-                                           .font(.caption2)
-                                           .foregroundStyle(.pink)
-                                }
+                // This view is intentionally left empty.
             } minimal: {
-                // Optimized for Apple Watch & iPhone Dynamic Island minimal
                 let imageName = context.attributes.speciesID
                 let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
                 Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 15, height: 15) // Extremely small for minimal
-                                    //.clipShape(Circle())
-                                    //.font(.system(size: 12))
-                                    //.symbolRenderingMode(.multicolor)
-                                    //.fallbackToSystemImage(ifImageNotFound: "pawprint.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 15, height: 15)
             }
         }
         .supplementalActivityFamilies([.small])
-
     }
 }
-
 // MARK: – Helper for lock‑screen stats
 @ViewBuilder
 private func statRow(title: String,

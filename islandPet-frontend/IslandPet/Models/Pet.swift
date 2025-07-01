@@ -28,8 +28,9 @@ struct Pet: Identifiable, Hashable, Codable {
     static let hugo = Pet(id: "hugo", name: "Hugo", assetName: "hugo")
     static let luna = Pet(id: "luna", name: "Luna", assetName: "luna")
     static let macy = Pet(id: "macy", name: "Macy", assetName: "macy")
+    static let goose = Pet(id: "goose", name: "Goose", assetName: "goose")
 
-    static let all: [Pet] = [.winnie, .finley, .maggie, .shelby, .hugo, .luna, .macy]
+    static let all: [Pet] = [.winnie, .finley, .maggie, .shelby, .hugo, .luna, .macy, .goose]
 
     /// Create a new pet instance with a unique ID from a given species template.
     static func makeInstance(from species: Pet) -> Pet {

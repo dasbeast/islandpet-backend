@@ -14,6 +14,28 @@ import SwiftUI   // for LocalizedStringResource
 private let intentLog = Logger(subsystem: "com.superbailey.IslandPet",
                                category: "PetIntents")
 
+class Debouncer {
+    private var workItem: DispatchWorkItem?
+    private let queue: DispatchQueue
+    private let delay: TimeInterval
+
+    init(delay: TimeInterval, queue: DispatchQueue = .main) {
+        self.delay = delay
+        self.queue = queue
+    }
+
+    func debounce(action: @escaping () -> Void) {
+        workItem?.cancel()
+        let newWorkItem = DispatchWorkItem(block: action)
+        workItem = newWorkItem
+        queue.asyncAfter(deadline: .now() + delay, execute: newWorkItem)
+    }
+}
+
+// Create a single debouncer instance to be shared by both intents.
+private let networkDebouncer = Debouncer(delay: 5.0)
+
+
 /// “Feed” button background intent
 @available(iOS 17.0, *)
 struct FeedPetIntent: LiveActivityIntent, AppIntent {
@@ -51,40 +73,38 @@ struct FeedPetIntent: LiveActivityIntent, AppIntent {
 
     func perform() async throws -> some IntentResult  & ReturnsValue<String> {
         intentLog.info("🍖 FeedPetIntent fired")
-        let idString = petID
-        if speciesID.isEmpty {
-            intentLog.error("Empty speciesID for FeedPetIntent, petID: \(petID, privacy: .public)")
-        }
-        intentLog.info("🎮 feedPetIntent uuid success ")
-        // Compute new state
-        // Hunger scale: 0 = full, 100 = starving. Feeding should *decrease* hunger.
-        let newHunger = max(0, hunger - 20)
-        let newHappiness = happiness
-        
-        intentLog.info("hunger updated")
 
-        // Update Live Activity
-        if let activity = Activity<PetAttributes>.activities.first(where: { $0.attributes.petID == petID }) {
-            await activity.update(using: PetAttributes.ContentState(happiness: newHappiness, hunger: newHunger))
-        } else {
-            intentLog.error("No Live Activity matching ID: \(petID, privacy: .public)")
-            return .result(value: "Live Activity session not found.")
-        }
+                // 1. Find the Live Activity first.
+                guard let activity = Activity<PetAttributes>.activities.first(where: { $0.attributes.petID == petID }) else {
+                    intentLog.error("No Live Activity matching ID: \(self.petID, privacy: .public)")
+                    return .result(value: "error feeding")
+                }
 
-        // Persist to backend
-        do {
-            try await Network.sendPetStateUpdate(
-                petID: petID,
-                hunger: newHunger,
-                happiness: newHappiness
-            )
-        } catch {
-            intentLog.error("sendPetStateUpdate error: \(error.localizedDescription, privacy: .public)")
-            return .result(value: "Failed to feed pet.")
-        }
-        
-        intentLog.info("post network")
+                // 2. Calculate the new state.
+                let newHunger = max(0, activity.content.state.hunger - 20)
+                let newHappiness = activity.content.state.happiness
+                let newState = PetAttributes.ContentState(happiness: newHappiness, hunger: newHunger)
 
+                // 3. Update the Live Activity UI immediately for a responsive feel.
+                await activity.update(using: newState)
+                intentLog.info("UI updated instantly for petID: \(self.petID, privacy: .public)")
+
+                // 4. Debounce the network call to send the final state.
+                networkDebouncer.debounce {
+                    Task {
+                        do {
+                            try await Network.sendPetStateUpdate(
+                                petID: self.petID,
+                                hunger: newHunger,
+                                happiness: newHappiness
+                            )
+                            intentLog.info("Network update sent for petID: \(self.petID, privacy: .public)")
+                        } catch {
+                            intentLog.error("sendPetStateUpdate error: \(error.localizedDescription, privacy: .public)")
+                        }
+                    }
+                }
+                
         return .result(value: "Pet fed.")
     }
 }
@@ -127,34 +147,37 @@ struct PlayPetIntent: LiveActivityIntent, AppIntent {
 
     func perform() async throws -> some IntentResult  & ReturnsValue<String> {
         intentLog.info("🎮 PlayPetIntent fired ")
-        if speciesID.isEmpty {
-            intentLog.error("Empty speciesID for PlayPetIntent, petID: \(petID, privacy: .public)")
-        }
-        intentLog.info("🎮 PlayPetIntent uuid success ")
-        // Compute new state
-        let newHunger = hunger
-        let newHappiness = min(100, happiness + 20)
 
-        // Update Live Activity
-        if let activity = Activity<PetAttributes>.activities.first(where: { $0.attributes.petID == petID }) {
-            await activity.update(using: PetAttributes.ContentState(happiness: newHappiness, hunger: newHunger))
-        } else {
-            intentLog.error("No Live Activity matching ID: \(petID, privacy: .public)")
-            return .result(value: "Live Activity session not found.")
-        }
+                // 1. Find the Live Activity first.
+                guard let activity = Activity<PetAttributes>.activities.first(where: { $0.attributes.petID == petID }) else {
+                    intentLog.error("No Live Activity matching ID: \(self.petID, privacy: .public)")
+                    return .result(value: "Error playing")
+                }
 
-        // Persist to backend
-        do {
-            try await Network.sendPetStateUpdate(
-                petID: petID,
-                hunger: newHunger,
-                happiness: newHappiness
-            )
-        } catch {
-            intentLog.error("sendPetStateUpdate error: \(error.localizedDescription, privacy: .public)")
-            return .result(value: "Failed to play with pet.")
-        }
+                // 2. Calculate the new state.
+                let newHunger = activity.content.state.hunger
+                let newHappiness = min(100, activity.content.state.happiness + 20)
+                let newState = PetAttributes.ContentState(happiness: newHappiness, hunger: newHunger)
+                
+                // 3. Update the Live Activity UI immediately.
+                await activity.update(using: newState)
+                intentLog.info("UI updated instantly for petID: \(self.petID, privacy: .public)")
 
+                // 4. Debounce the network call.
+                networkDebouncer.debounce {
+                    Task {
+                        do {
+                            try await Network.sendPetStateUpdate(
+                                petID: self.petID,
+                                hunger: newHunger,
+                                happiness: newHappiness
+                            )
+                            intentLog.info("Network update sent for petID: \(self.petID, privacy: .public)")
+                        } catch {
+                            intentLog.error("sendPetStateUpdate error: \(error.localizedDescription, privacy: .public)")
+                        }
+                    }
+                }
         return .result(value: "Played with pet.")
     }
 }
