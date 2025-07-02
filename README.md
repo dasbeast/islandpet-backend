@@ -35,10 +35,15 @@ The system is designed to be persistent. Even when the app is closed, the backen
 
 The project is organized into a monorepo containing two main packages:
 
--   **`/islandPet-frontend`**: The native iOS application written in Swift and SwiftUI. This includes the main app, the Live Activity widget, and all UI components.
--   **`/islandpet-backend`**: The Node.js backend service built with Express.js. It manages pet state, user sessions, and communication with Apple Push Notification service (APNs).
+- `/islandPet-frontend`: The native iOS application written in Swift and SwiftUI. This includes the main app, the Live Activity widget, and all UI components.
+- `/islandpet-backend`: The Node.js backend service built with Express.js. It manages pet state, user sessions, and communication with Apple Push Notification service (APNs).
 
-.├── .github/              # GitHub Actions workflows (e.g., for the decay job)├── islandpet-backend/    # Node.js backend service└── islandPet-frontend/   # Xcode project for the iOS App
+```
+.
+├── .github/              # GitHub Actions workflows (e.g., for the decay job)
+├── islandpet-backend/    # Node.js backend service
+└── islandPet-frontend/   # Xcode project for the iOS App
+```
 ## Technology Stack
 
 | Component | Technology                                       |
