@@ -4,6 +4,34 @@ import UIKit
 import ActivityKit
 import AppIntents
 
+// Helper function to determine hunger color
+private func hungerColor(for hunger: Int) -> Color {
+    switch hunger {
+    case 0...30:
+        return .green
+    case 31...70:
+        return .yellow
+    default:
+        return .red
+    }
+}
+
+// Helper function to determine happiness bar color
+private func happinessColor(for happiness: Int) -> Color {
+    switch happiness {
+    case 81...100:
+        return .indigo
+    case 61...80:
+        return .mint
+    case 41...60:
+        return .cyan
+    case 21...40:
+        return .teal
+    default:
+        return .white
+    }
+}
+
 // A helper view to contain the logic for switching between widget families.
 struct PetActivityView: View {
     // This environment variable lets us check where the widget is being displayed.
@@ -25,7 +53,7 @@ struct PetActivityView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 75, height: 75)
-                            
+
                             VStack(alignment: .leading) {
                                 HStack {
                                     Button(intent: PlayPetIntent(
@@ -37,10 +65,11 @@ struct PetActivityView: View {
                                     ) {
                                        Image(systemName: "heart.fill")
                                     }
-                                    .tint(.mint.opacity(0.8))
-                                    
+                                    .tint(happinessColor(for: context.state.happiness).opacity(0.8))
+
                                     Text("\(context.state.happiness)%")
                                         .font(.caption)
+                                        .foregroundColor(.white)
                                 }
                                 HStack {
                                     Button(intent: FeedPetIntent(
@@ -52,9 +81,10 @@ struct PetActivityView: View {
                                     ) {
                                         Image(systemName: "fork.knife")
                                     }
-                                    .tint(.pink.opacity(0.8))
+                                    .tint(hungerColor(for: context.state.hunger).opacity(0.8))
                                     Text("\(context.state.hunger)%")
                                         .font(.caption)
+                                        .foregroundColor(.white)
                                 }
                             }
                         }
@@ -73,6 +103,7 @@ struct PetActivityView: View {
                         Text(context.attributes.speciesID.capitalized)
                             .font(.headline)
                             .frame(maxWidth: .infinity, alignment: .center)
+                            .foregroundColor(.white)
                         if #available(iOS 16.1, *) {
                             Button(intent: PlayPetIntent(
                                 petID: context.attributes.petID,
@@ -85,7 +116,7 @@ struct PetActivityView: View {
                                     .labelStyle(.titleAndIcon)
                             }
                             .font(.subheadline)
-                            .tint(.mint)
+                            .tint(happinessColor(for: context.state.happiness))
                             .frame(minWidth: 100)
                         }
                     }
@@ -95,12 +126,12 @@ struct PetActivityView: View {
                         statRow(
                             title: "Happiness",
                             value: context.state.happiness,
-                            tint: .mint
+                            tint: .clear // Tint is now handled by the statRow itself
                         )
                         statRow(
                             title: "Hunger",
                             value: context.state.hunger,
-                            tint: .pink
+                            tint: .clear // Tint is now handled by the statRow itself
                         )
                     }
 
@@ -118,7 +149,7 @@ struct PetActivityView: View {
                                     .labelStyle(.titleAndIcon)
                             }
                             .font(.subheadline)
-                            .tint(.pink)
+                            .tint(hungerColor(for: context.state.hunger))
                             .frame(minWidth: 100)
                         }
                     }
@@ -127,7 +158,7 @@ struct PetActivityView: View {
                 .padding(.trailing, 12)
             }
             .activityBackgroundTint(Color.black.opacity(0.45))
-            .activitySystemActionForegroundColor(.black)
+            .activitySystemActionForegroundColor(.white)
         }
     }
 }
@@ -154,13 +185,13 @@ struct PetActivityWidget: Widget {
                         statRow(
                             title: "Happiness",
                             value: context.state.happiness,
-                            tint: .mint,
+                            tint: .clear, // Tint is now handled by the statRow itself
                             barWidth: 80
                         )
                         statRow(
                             title: "Hunger",
                             value: context.state.hunger,
-                            tint: .pink,
+                            tint: .clear, // Tint is now handled by the statRow itself
                             barWidth: 80
                         )
                     }
@@ -172,13 +203,13 @@ struct PetActivityWidget: Widget {
                                 Image(systemName: "gamecontroller")
                                     .imageScale(.large)
                             }
-                            .tint(.mint)
+                            .tint(happinessColor(for: context.state.happiness))
 
                             Button(intent: FeedPetIntent(petID: context.attributes.petID, hunger: context.state.hunger, happiness: context.state.happiness, speciesID: context.attributes.speciesID)) {
                                 Image(systemName: "fork.knife")
                                     .imageScale(.large)
                             }
-                            .tint(.pink)
+                            .tint(hungerColor(for: context.state.hunger))
                         }
                     }
                 }
@@ -206,24 +237,34 @@ struct PetActivityWidget: Widget {
         .supplementalActivityFamilies([.small])
     }
 }
+
 // MARK: – Helper for lock‑screen stats
-@ViewBuilder
 private func statRow(title: String,
                      value: Int,
                      tint: Color,
                      barWidth: CGFloat? = nil) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
+
+    let finalTint: Color
+    if title == "Hunger" {
+        finalTint = hungerColor(for: value)
+    } else { // Happiness
+        finalTint = happinessColor(for: value)
+    }
+
+    return VStack(alignment: .leading, spacing: 2) {
         HStack {
             Text(title)
                 .font(.caption2)
+                .foregroundColor(.white)
             Spacer(minLength: 4)
             Text("\(value)%")
                 .font(.caption2)
                 .monospacedDigit()
+                .foregroundColor(.white)
         }
         ProgressView(value: Double(value), total: 100)
             .progressViewStyle(.linear)
-            .frame(width: barWidth)          // constrain when width provided
-            .tint(tint)
+            .frame(width: barWidth)
+            .tint(finalTint)
     }
 }

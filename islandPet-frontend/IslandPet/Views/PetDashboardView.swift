@@ -12,6 +12,34 @@ struct PetDashboardView: View {
     @AppStorage("petID") private var storedPetID: String = ""
     @State private var showEndConfirmation: Bool = false
 
+    // Helper to determine hunger bar color
+        private func hungerColor(for hunger: Int) -> Color {
+            switch hunger {
+            case 0...30:
+                return .green // Not hungry
+            case 31...70:
+                return .yellow // Getting hungry
+            default:
+                return .red // Very hungry
+            }
+        }
+    
+    // Helper to determine happiness bar color
+        private func happinessColor(for happiness: Int) -> Color {
+            switch happiness {
+            case 81...100:
+                return .indigo
+            case 61...80:
+                return .mint
+            case 41...60:
+                return .cyan
+            case 21...40:
+                return .teal // Changed from .orange to .teal
+            default:
+                return .white
+            }
+        }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
@@ -31,8 +59,20 @@ struct PetDashboardView: View {
 
                 // MARK: – Stats card
                 VStack(spacing: 16) {
-                    statRow(title: "Hunger", value: hunger, tint: .pink)
-                    statRow(title: "Happiness", value: happiness, tint: .mint)
+                    statRow(title: "Happiness", value: happiness, tint: happinessColor(for: happiness))
+                    if happiness <= 5 {
+                        Text("Your pet is very sad! Play with it soon!")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .padding(.top, -10)
+                    }
+                    statRow(title: "Hunger", value: hunger, tint: hungerColor(for: hunger))
+                    if hunger >= 95 {
+                        Text("Your pet is very hungry! Feed it soon!")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.top, -10)
+                    }
                 }
                 .padding()
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -53,12 +93,12 @@ struct PetDashboardView: View {
                         actionButton("Feed", systemImage: "fork.knife") {
                             Task { await feedPet() }
                         }
-                        .tint(.pink)
+                        .tint(hungerColor(for: hunger))
 
                         actionButton("Play", systemImage: "gamecontroller") {
                             Task { await playPet() }
                         }
-                        .tint(.mint)
+                        .tint(happinessColor(for: happiness))
                     }
 
                     Button {
