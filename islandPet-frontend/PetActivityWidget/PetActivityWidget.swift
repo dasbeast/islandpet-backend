@@ -28,147 +28,164 @@ private func happinessColor(for happiness: Int) -> Color {
     case 21...40:
         return .teal
     default:
-        return .white
+        return .gray
     }
 }
 
 // A helper view to contain the logic for switching between widget families.
 struct PetActivityView: View {
-    // This environment variable lets us check where the widget is being displayed.
     @Environment(\.activityFamily) var activityFamily
     let context: ActivityViewContext<PetAttributes>
 
     var body: some View {
-        // This is the main view for the Lock Screen.
-        // We'll use a switch statement to provide a different, non-interactive
-        // view specifically for the Apple Watch.
-        switch activityFamily {
-        case .small:
-            // This custom view will be used for the Apple Watch Smart Stack.
-            // It's non-interactive and only shows the pet.
-            HStack(spacing: 10) {
-                            let imageName = context.attributes.speciesID
-                            let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 75, height: 75)
-
-                            VStack(alignment: .leading) {
-                                HStack {
-                                    Button(intent: PlayPetIntent(
-                                        petID: context.attributes.petID,
-                                        hunger: context.state.hunger,
-                                        happiness: context.state.happiness,
-                                        speciesID: context.attributes.speciesID
-                                        )
-                                    ) {
-                                       Image(systemName: "heart.fill")
-                                    }
-                                    .tint(happinessColor(for: context.state.happiness).opacity(0.8))
-
-                                    Text("\(context.state.happiness)%")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                }
-                                HStack {
-                                    Button(intent: FeedPetIntent(
-                                        petID: context.attributes.petID,
-                                        hunger: context.state.hunger,
-                                        happiness: context.state.happiness,
-                                        speciesID: context.attributes.speciesID
-                                        )
-                                    ) {
-                                        Image(systemName: "fork.knife")
-                                    }
-                                    .tint(hungerColor(for: context.state.hunger).opacity(0.8))
-                                    Text("\(context.state.hunger)%")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                }
-                            }
-                        }
-        default:
-            // This is the standard Lock Screen view for the iPhone.
-            let imageName = context.attributes.speciesID
-            let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
-            HStack(alignment: .center, spacing: 12) {
-                Image(uiImage: uiImage)
+        if context.isStale {
+            // MARK: - Stale View Layout
+            HStack {
+                Image(context.attributes.speciesID)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 100, height: 100)
+                    .frame(width: 60, height: 60)
+                    .padding()
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(context.attributes.speciesID.capitalized)
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .foregroundColor(.white)
-                        if #available(iOS 16.1, *) {
-                            Button(intent: PlayPetIntent(
-                                petID: context.attributes.petID,
-                                hunger: context.state.hunger,
-                                happiness: context.state.happiness,
-                                speciesID: context.attributes.speciesID
-                                )
-                            ) {
-                                Label("Play", systemImage: "gamecontroller")
-                                    .labelStyle(.titleAndIcon)
-                            }
-                            .font(.subheadline)
-                            .tint(happinessColor(for: context.state.happiness))
-                            .frame(minWidth: 100)
-                        }
-                    }
-                    .padding(.top, 20)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        statRow(
-                            title: "Happiness",
-                            value: context.state.happiness,
-                            tint: .clear // Tint is now handled by the statRow itself
-                        )
-                        statRow(
-                            title: "Hunger",
-                            value: context.state.hunger,
-                            tint: .clear // Tint is now handled by the statRow itself
-                        )
-                    }
-
-                    HStack {
-                        Spacer()
-                        if #available(iOS 16.1, *) {
-                            Button(intent: FeedPetIntent(
-                                petID: context.attributes.petID,
-                                hunger: context.state.hunger,
-                                happiness: context.state.happiness,
-                                speciesID: context.attributes.speciesID
-                                )
-                            ) {
-                                Label("Feed", systemImage: "fork.knife")
-                                    .labelStyle(.titleAndIcon)
-                            }
-                            .font(.subheadline)
-                            .tint(hungerColor(for: context.state.hunger))
-                            .frame(minWidth: 100)
-                        }
-                    }
-                    .padding(.bottom, 20)
+                VStack(alignment: .leading) {
+                    Text("\(context.attributes.speciesID.capitalized)'s adventure has ended!")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Start a new session in the app.")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
                 }
-                .padding(.trailing, 12)
+                Spacer()
             }
-            .activityBackgroundTint(Color.black.opacity(0.45))
-            .activitySystemActionForegroundColor(.white)
+            .padding()
+            .activityBackgroundTint(Color.gray.opacity(0.5))
+            
+        } else {
+            // MARK: - Active View Layout
+            switch activityFamily {
+            case .small:
+                HStack(spacing: 10) {
+                                let imageName = context.attributes.speciesID
+                                let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 75, height: 75)
+
+                                VStack(alignment: .leading) {
+                                    HStack {
+                                        Button(intent: PlayPetIntent(
+                                            petID: context.attributes.petID,
+                                            hunger: context.state.hunger,
+                                            happiness: context.state.happiness,
+                                            speciesID: context.attributes.speciesID
+                                            )
+                                        ) {
+                                           Image(systemName: "heart.fill")
+                                        }
+                                        .tint(happinessColor(for: context.state.happiness).opacity(0.8))
+
+                                        Text("\(context.state.happiness)%")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                    }
+                                    HStack {
+                                        Button(intent: FeedPetIntent(
+                                            petID: context.attributes.petID,
+                                            hunger: context.state.hunger,
+                                            happiness: context.state.happiness,
+                                            speciesID: context.attributes.speciesID
+                                            )
+                                        ) {
+                                            Image(systemName: "fork.knife")
+                                        }
+                                        .tint(hungerColor(for: context.state.hunger).opacity(0.8))
+                                        Text("\(context.state.hunger)%")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            }
+            default:
+                let imageName = context.attributes.speciesID
+                let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!
+                HStack(alignment: .center, spacing: 12) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(context.attributes.speciesID.capitalized)
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .foregroundColor(.white)
+                            if #available(iOS 16.1, *) {
+                                Button(intent: PlayPetIntent(
+                                    petID: context.attributes.petID,
+                                    hunger: context.state.hunger,
+                                    happiness: context.state.happiness,
+                                    speciesID: context.attributes.speciesID
+                                    )
+                                ) {
+                                    Label("Play", systemImage: "gamecontroller")
+                                        .labelStyle(.titleAndIcon)
+                                }
+                                .font(.subheadline)
+                                .tint(happinessColor(for: context.state.happiness))
+                                .frame(minWidth: 100)
+                            }
+                        }
+                        .padding(.top, 20)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            statRow(
+                                title: "Happiness",
+                                value: context.state.happiness,
+                                tint: .clear
+                            )
+                            statRow(
+                                title: "Hunger",
+                                value: context.state.hunger,
+                                tint: .clear
+                            )
+                        }
+
+                        HStack {
+                            Spacer()
+                            if #available(iOS 16.1, *) {
+                                Button(intent: FeedPetIntent(
+                                    petID: context.attributes.petID,
+                                    hunger: context.state.hunger,
+                                    happiness: context.state.happiness,
+                                    speciesID: context.attributes.speciesID
+                                    )
+                                ) {
+                                    Label("Feed", systemImage: "fork.knife")
+                                        .labelStyle(.titleAndIcon)
+                                }
+                                .font(.subheadline)
+                                .tint(hungerColor(for: context.state.hunger))
+                                .frame(minWidth: 100)
+                            }
+                        }
+                        .padding(.bottom, 20)
+                    }
+                    .padding(.trailing, 12)
+                }
+                .activityBackgroundTint(Color.black.opacity(0.45))
+                .activitySystemActionForegroundColor(.white)
+            }
         }
     }
 }
 
 
-@main
+
 struct PetActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PetAttributes.self) { context in
-            // Use the helper view to render the correct UI.
             PetActivityView(context: context)
         } dynamicIsland: { context in
             DynamicIsland {
@@ -185,13 +202,13 @@ struct PetActivityWidget: Widget {
                         statRow(
                             title: "Happiness",
                             value: context.state.happiness,
-                            tint: .clear, // Tint is now handled by the statRow itself
+                            tint: .clear,
                             barWidth: 80
                         )
                         statRow(
                             title: "Hunger",
                             value: context.state.hunger,
-                            tint: .clear, // Tint is now handled by the statRow itself
+                            tint: .clear,
                             barWidth: 80
                         )
                     }
@@ -224,7 +241,6 @@ struct PetActivityWidget: Widget {
                         .scaledToFit()
                         .frame(width: 35, height: 25)
             } compactTrailing: {
-                // This view is intentionally left empty.
             } minimal: {
                 let imageName = context.attributes.speciesID
                 let uiImage = UIImage(named: imageName) ?? UIImage(systemName: "pawprint.fill")!

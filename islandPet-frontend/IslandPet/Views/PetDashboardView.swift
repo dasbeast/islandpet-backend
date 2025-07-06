@@ -1,6 +1,7 @@
 import os
 import SwiftUI
 import ActivityKit
+import WidgetKit
 
 struct PetDashboardView: View {
     let pet: Pet
@@ -8,8 +9,8 @@ struct PetDashboardView: View {
     @State private var currentActivity: Activity<PetAttributes>?
     @State private var hunger: Int = 0
     @State private var happiness: Int = 100
-    @AppStorage("sessionID") private var storedSessionID: String = ""
-    @AppStorage("petID") private var storedPetID: String = ""
+    @AppStorage("sessionID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSessionID: String = ""
+    @AppStorage("petID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedPetID: String = ""
     @State private var showEndConfirmation: Bool = false
 
     // Helper to determine hunger bar color
@@ -34,9 +35,9 @@ struct PetDashboardView: View {
             case 41...60:
                 return .cyan
             case 21...40:
-                return .teal // Changed from .orange to .teal
+                return .teal 
             default:
-                return .white
+                return .gray
             }
         }
     
@@ -410,7 +411,10 @@ extension PetDashboardView {
         } catch {
             print("❌ clearAllData error:", error)
         }
-        // 3. Navigate back to pet selection
-        onRehome()
+        // 3. Tell the widget to reload its timeline
+            WidgetCenter.shared.reloadTimelines(ofKind: "PetStatusWidget")
+
+            // 4. Navigate back to pet selection
+            onRehome()
     }
 }

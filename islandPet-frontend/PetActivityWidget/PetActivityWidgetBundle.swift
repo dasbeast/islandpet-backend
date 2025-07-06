@@ -8,10 +8,10 @@
 import WidgetKit
 import SwiftUI
 
-
+@main
 struct PetActivityWidgetBundle: WidgetBundle {
     var body: some Widget {
         PetActivityWidget()
-        
+        PetStatusWidget()
     }
 }

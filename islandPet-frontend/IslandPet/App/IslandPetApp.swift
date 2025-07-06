@@ -14,9 +14,9 @@ struct IslandPetApp: App {
     @State private var adoptedPet: Pet? = nil          // nil ⇒ show picker
     @State private var isLoading: Bool = true          // show loading screen on launch
     // persisted pet identifiers
-    @AppStorage("petID") private var storedPetID: String = ""
-    @AppStorage("speciesID") private var storedSpeciesID: String = ""
-    @AppStorage("sessionID") private var storedSessionID: String = ""
+    @AppStorage("petID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedPetID: String = ""
+    @AppStorage("speciesID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSpeciesID: String = ""
+    @AppStorage("sessionID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSessionID: String = ""
     @State private var didLoad: Bool = false
 
     // MARK: – Main scene

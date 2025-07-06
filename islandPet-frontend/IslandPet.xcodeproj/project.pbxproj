@@ -89,6 +89,7 @@
 		D42DDCE92DDF9EF100399388 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D42DDCEB2DDF9EF200399388 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		D4779A8D2DFE5B32002EBB7A /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
+		DEA504052E1ADCE300FFAEA0 /* PetActivityWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PetActivityWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -111,11 +112,17 @@
 			membershipExceptions = (
 				Assets.xcassets,
 				Intents/PetIntents.swift,
-				"islandPet-icon.icon",
 				Models/PetAttributes.swift,
 				Services/PetActivityManager.swift,
 			);
 			target = D42DDCE62DDF9EF100399388 /* PetActivityWidgetExtension */;
+		};
+		DE161DEC2E18A64D0080DCA9 /* Exceptions for "PetActivityWidget" folder in "IslandPet" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				PetStatusWidget.swift,
+			);
+			target = D42DDCB82DDF9E1D00399388 /* IslandPet */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -142,6 +149,7 @@
 		D42DDCED2DDF9EF200399388 /* PetActivityWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				DE161DEC2E18A64D0080DCA9 /* Exceptions for "PetActivityWidget" folder in "IslandPet" target */,
 				D421924D2E03454400F4B7D5 /* Exceptions for "PetActivityWidget" folder in "PetActivityWidgetExtension" target */,
 			);
 			path = PetActivityWidget;
@@ -186,6 +194,7 @@
 		D42DDCB02DDF9E1D00399388 = {
 			isa = PBXGroup;
 			children = (
+				DEA504052E1ADCE300FFAEA0 /* PetActivityWidgetExtension.entitlements */,
 				D42DDCBB2DDF9E1D00399388 /* IslandPet */,
 				D42DDCC92DDF9E2000399388 /* IslandPetTests */,
 				D42DDCD32DDF9E2000399388 /* IslandPetUITests */,
@@ -731,6 +740,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PetActivityWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 4V28UB843Z;
@@ -758,6 +768,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PetActivityWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 4V28UB843Z;

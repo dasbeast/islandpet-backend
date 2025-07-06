@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 
 struct PetSelectionView: View {
-    @AppStorage("speciesID") private var storedSpeciesID: String = ""
-    @AppStorage("sessionID") private var storedSessionID: String = ""
-    @AppStorage("petID") private var storedPetID: String = ""
+    @AppStorage("speciesID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSpeciesID: String = ""
+    @AppStorage("sessionID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSessionID: String = ""
+    @AppStorage("petID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedPetID: String = ""
+
     @State private var selection: Pet = Pet.all.first ?? .winnie
     @State private var showAlert = false
     @State private var alertMessage: String = ""
@@ -65,6 +67,10 @@ struct PetSelectionView: View {
                         // 3. Persist the chosen species and invoke the adopt callback
                         storedSpeciesID = instance.assetName
                         storedPetID = instance.id
+                        
+                        // Tell the widget to reload its timeline
+                        WidgetCenter.shared.reloadTimelines(ofKind: "PetStatusWidget")
+                                                
                         onAdopt(instance)
                     } catch {
                         alertMessage = "Failed to adopt pet: \(error.localizedDescription)"
