@@ -1,31 +1,41 @@
-import { Pool } from 'pg';
+import mysql from 'mysql2/promise';
 import config from '../config/index.js';
+
 console.log('[db] initializing database connection, URL:', config.databaseUrl);
 
-export const pool = new Pool({
-    connectionString: config.databaseUrl,
-    ssl: { rejectUnauthorized: false }
-});
-pool.on('connect', () => console.log('[db] connected to database'));
-pool.on('error', err => console.error('[db] database error:', err));
+// Create a connection pool
+export const pool = mysql.createPool(config.databaseUrl);
 
-// create tables on startup
-pool.query(`
+pool.getConnection()
+    .then(conn => {
+        console.log('[db] connected to database');
+        conn.release();
+    })
+    .catch(err => {
+        console.error('[db] database connection error:', err);
+    });
+
+// MySQL-compatible table creation queries
+const createTablesQueries = `
     CREATE TABLE IF NOT EXISTS pet_states (
-      pet_id       TEXT PRIMARY KEY,
-      species_id   TEXT NOT NULL,
-      hunger       INTEGER NOT NULL DEFAULT 0,
-      happiness    INTEGER NOT NULL DEFAULT 100,
-      last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      pet_id       VARCHAR(255) PRIMARY KEY,
+      species_id   VARCHAR(255) NOT NULL,
+      hunger       INT NOT NULL DEFAULT 0,
+      happiness    INT NOT NULL DEFAULT 100,
+      last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS pet_sessions (
-      activity_id TEXT PRIMARY KEY,
-      pet_id      TEXT NOT NULL REFERENCES pet_states(pet_id),
-      species_id  TEXT NOT NULL,
+      activity_id VARCHAR(255) PRIMARY KEY,
+      pet_id      VARCHAR(255) NOT NULL,
+      species_id  VARCHAR(255) NOT NULL,
       token       TEXT,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE(pet_id)
+      created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(pet_id),
+      FOREIGN KEY (pet_id) REFERENCES pet_states(pet_id) ON DELETE CASCADE
     );
-  `)
+`;
+
+// Execute table creation
+pool.query(createTablesQueries)
     .then(() => console.log('[db] tables ensured'))
-    .catch(err => console.error('[db] table creation error:', err));
+    .catch(err => console.error('[db] table creation error:', err.message));

@@ -30,19 +30,18 @@ export async function refreshToken(req, res, next) {
     }
 }
 
-// at the bottom of registerController.js
 export async function renameSession(req, res, next) {
     try {
         console.log('[renameSession] payload:', req.body);
         const { oldActivityID, newActivityID } = req.body;
-        const result = await pool.query(
+        const [result] = await pool.query(
             `UPDATE pet_sessions
-         SET activity_id = $1
-       WHERE activity_id = $2`,
+             SET activity_id = ?
+             WHERE activity_id = ?`,
             [newActivityID, oldActivityID]
         );
-        if (!result.rowCount) return res.sendStatus(404);
-        console.log('[renameSession] rows updated:', result.rowCount);
+        if (!result.affectedRows) return res.sendStatus(404);
+        console.log('[renameSession] rows updated:', result.affectedRows);
         res.sendStatus(200);
     } catch (err) {
         console.error('[renameSession] error:', err);

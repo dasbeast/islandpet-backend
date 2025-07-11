@@ -1,42 +1,42 @@
 import { pool } from '../db/index.js';
 
 export async function upsertSession(activityID, petID, speciesID, token) {
-    const { rows } = await pool.query(`
-    INSERT INTO pet_sessions(activity_id, pet_id, species_id, token)
-      VALUES($1,$2,$3,$4)
-    ON CONFLICT(pet_id) DO UPDATE
-      SET activity_id = EXCLUDED.activity_id,
-          species_id  = EXCLUDED.species_id,
-          token       = EXCLUDED.token,
-          created_at  = NOW()
-    RETURNING *`,
-        [activityID, petID, speciesID, token]
-    );
+    const sql = `
+        INSERT INTO pet_sessions(activity_id, pet_id, species_id, token, created_at)
+          VALUES(?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+          activity_id = VALUES(activity_id),
+          species_id  = VALUES(species_id),
+          token       = VALUES(token),
+          created_at  = NOW()`;
+    await pool.query(sql, [activityID, petID, speciesID, token]);
+
+    // Fetch and return the session data since RETURNING is not available
+    const [rows] = await pool.query('SELECT * FROM pet_sessions WHERE pet_id = ?', [petID]);
     return rows[0];
 }
 
+// Other functions with updated parameter markers
 export async function updateSessionToken(activityID, token) {
-    const { rowCount } = await pool.query(`
-    UPDATE pet_sessions
-       SET token = $1
-     WHERE activity_id = $2`,
+    const [result] = await pool.query(
+        `UPDATE pet_sessions SET token = ? WHERE activity_id = ?`,
         [token, activityID]
     );
-    return rowCount;
+    return result.affectedRows;
 }
 
 export async function deleteSession(activityID) {
     await pool.query(
-        `DELETE FROM pet_sessions WHERE activity_id = $1`,
+        `DELETE FROM pet_sessions WHERE activity_id = ?`,
         [activityID]
     );
 }
 
 export async function getActiveSessions() {
-    const { rows } = await pool.query(`
-    SELECT ps.activity_id, ps.pet_id, ps.token, s.hunger, s.happiness
-      FROM pet_sessions ps
-      JOIN pet_states s ON s.pet_id = ps.pet_id
-  `);
+    const [rows] = await pool.query(`
+        SELECT ps.activity_id, ps.pet_id, ps.token, s.hunger, s.happiness
+        FROM pet_sessions ps
+                 JOIN pet_states s ON s.pet_id = ps.pet_id
+    `);
     return rows;
 }
