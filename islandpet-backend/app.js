@@ -7,7 +7,7 @@ const app = express();
 console.log('[app] Express application initialized');
 app.use(morgan(':method :url :status :response-time ms'));
 app.use(express.json());
-app.use('/', routes);
+app.use('/islandpetserver', routes);
 
 // global error handler
 app.use((err, req, res, next) => {
