@@ -50,13 +50,24 @@ enum PetActivityManager {
 }
 
 enum Network {
-    /*
-    // Uncomment and configure API base URL in Info.plist under "API_BASE_URL"
+    
     static let baseURL: URL = {
-        let urlString = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as! String
-        return URL(string: urlString)!
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") else {
+            fatalError("API_BASE_URL not found in Info.plist")
+        }
+        print("API_BASE_URL from Info.plist (raw):", raw)
+
+        guard let urlString = raw as? String else {
+            fatalError("API_BASE_URL is not a String: \(raw)")
+        }
+
+        guard let url = URL(string: urlString) else {
+            fatalError("Invalid API_BASE_URL: \(urlString)")
+        }
+
+        return url
     }()
-    */
+    
 
     // MARK: - Codable models for API
     struct PetStateResponse: Decodable {
@@ -90,7 +101,7 @@ enum Network {
                                       activityID: String,
                                       petID: String,
                                       speciesID: String) async throws {
-        let url = URL(string: "https://islandpet-backend.onrender.com/register/token")!
+        let url = baseURL.appendingPathComponent("register/token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -115,7 +126,9 @@ enum Network {
                                    petID: String,
                                    speciesID: String) async throws {
         print("[Network] registerPetSession called with activityID:", activityID, "token:", token)
-        let url = URL(string: "https://islandpet-backend.onrender.com/register")!
+        
+        let url = baseURL.appendingPathComponent("register")
+        print("👉 Sending request to:", url.absoluteString)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -135,7 +148,7 @@ enum Network {
     }
     /// Tells the backend to delete a Live Activity record when the user ends the pet
     static func sendEndActivity(activityID: String) async throws {
-        let url = URL(string: "https://islandpet-backend.onrender.com/end")!
+        let url = baseURL.appendingPathComponent("end")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -153,7 +166,7 @@ enum Network {
     static func sendPetStateUpdate(petID: String,
                                    hunger: Int,
                                    happiness: Int) async throws {
-        let url = URL(string: "https://islandpet-backend.onrender.com/update")!
+        let url = baseURL.appendingPathComponent("update")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -172,7 +185,7 @@ enum Network {
 
     /// Fetches persisted pet state from backend.
     static func fetchPetState(petID: String) async throws -> PetStateResponse {
-        let url = URL(string: "https://islandpet-backend.onrender.com/pets/\(petID)")!
+        let url = baseURL.appendingPathComponent("pets/\(petID)")
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -197,7 +210,7 @@ enum Network {
     /// Renames an existing session's activity_id on the server.
     static func updateSessionActivityID(oldActivityID: String,
                                         newActivityID: String) async throws {
-        let url = URL(string: "https://islandpet-backend.onrender.com/register/rename-session")!
+        let url = baseURL.appendingPathComponent("register/rename-session")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -214,7 +227,7 @@ enum Network {
 
     static func endPetCompletely(petID: String) async throws {
         // Clear all pet data for this specific pet
-        let url = URL(string: "https://islandpet-backend.onrender.com/pets/\(petID)")!
+        let url = baseURL.appendingPathComponent("pets/\(petID)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         let (_, response) = try await URLSession.shared.data(for: request)

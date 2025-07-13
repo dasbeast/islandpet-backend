@@ -10,6 +10,7 @@
 		D445657C2DDFDC8800617EF5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D42DDCEB2DDF9EF200399388 /* SwiftUI.framework */; };
 		D445657F2DDFDC8A00617EF5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D42DDCE92DDF9EF100399388 /* WidgetKit.framework */; };
 		D4779ABC2E00BE17002EBB7A /* PetActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D42DDCE72DDF9EF100399388 /* PetActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D4DE87312E216AA100260729 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D4DE87302E216AA100260729 /* Config.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +90,7 @@
 		D42DDCE92DDF9EF100399388 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D42DDCEB2DDF9EF200399388 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		D4779A8D2DFE5B32002EBB7A /* Intents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Intents.framework; path = System/Library/Frameworks/Intents.framework; sourceTree = SDKROOT; };
+		D4DE87302E216AA100260729 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		DEA504052E1ADCE300FFAEA0 /* PetActivityWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PetActivityWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -194,6 +196,7 @@
 		D42DDCB02DDF9E1D00399388 = {
 			isa = PBXGroup;
 			children = (
+				D4DE87302E216AA100260729 /* Config.xcconfig */,
 				DEA504052E1ADCE300FFAEA0 /* PetActivityWidgetExtension.entitlements */,
 				D42DDCBB2DDF9E1D00399388 /* IslandPet */,
 				D42DDCC92DDF9E2000399388 /* IslandPetTests */,
@@ -377,6 +380,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4DE87312E216AA100260729 /* Config.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,6 +474,7 @@
 /* Begin XCBuildConfiguration section */
 		D42DDCD82DDF9E2000399388 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -533,6 +538,7 @@
 		};
 		D42DDCD92DDF9E2000399388 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -589,6 +595,7 @@
 		};
 		D42DDCDB2DDF9E2000399388 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "islandPet-icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -626,6 +633,7 @@
 		};
 		D42DDCDC2DDF9E2000399388 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "islandPet-icon";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -663,6 +671,7 @@
 		};
 		D42DDCDE2DDF9E2000399388 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -683,6 +692,7 @@
 		};
 		D42DDCDF2DDF9E2000399388 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -703,6 +713,7 @@
 		};
 		D42DDCE12DDF9E2000399388 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -720,6 +731,7 @@
 		};
 		D42DDCE22DDF9E2000399388 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -737,6 +749,7 @@
 		};
 		D42DDD002DDF9EF400399388 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
@@ -765,6 +778,7 @@
 		};
 		D42DDD012DDF9EF400399388 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D4DE87302E216AA100260729 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
