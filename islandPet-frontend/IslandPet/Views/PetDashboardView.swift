@@ -6,48 +6,67 @@ import WidgetKit
 struct PetDashboardView: View {
     let pet: Pet
     let onRehome: () -> Void
+
+    // MARK: - State Properties
     @State private var currentActivity: Activity<PetAttributes>?
-    @State private var hunger: Int = 0
-    @State private var happiness: Int = 100
+    @State private var hunger: Int
+    @State private var happiness: Int
+
+    // MARK: - AppStorage for Persistence
     @AppStorage("sessionID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedSessionID: String = ""
     @AppStorage("petID", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var storedPetID: String = ""
+    @AppStorage("lastKnownHunger", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var lastKnownHunger: Int = 0
+    @AppStorage("lastKnownHappiness", store: UserDefaults(suiteName: "group.com.superbailey.IslandPet")) private var lastKnownHappiness: Int = 100
+    
     @State private var showEndConfirmation: Bool = false
 
-    // Helper to determine hunger bar color
-        private func hungerColor(for hunger: Int) -> Color {
-            switch hunger {
-            case 0...30:
-                return .green // Not hungry
-            case 31...70:
-                return .yellow // Getting hungry
-            default:
-                return .red // Very hungry
-            }
+        init(pet: Pet, onRehome: @escaping () -> Void) {
+            self.pet = pet
+            self.onRehome = onRehome
+            
+            let userDefaults = UserDefaults(suiteName: "group.com.superbailey.IslandPet")
+            let initialHunger = userDefaults?.integer(forKey: "lastKnownHunger") ?? 0
+            let initialHappiness = userDefaults?.integer(forKey: "lastKnownHappiness") ?? 100
+            
+            _hunger = State(initialValue: initialHunger)
+            _happiness = State(initialValue: initialHappiness)
         }
+    // Helper to determine hunger bar color
+    private func hungerColor(for hunger: Int) -> Color {
+        switch hunger {
+        case 0...30:
+            return .green
+        case 31...70:
+            return .yellow
+        default:
+            return .red
+        }
+    }
     
     // Helper to determine happiness bar color
-        private func happinessColor(for happiness: Int) -> Color {
-            switch happiness {
-            case 81...100:
-                return .indigo
-            case 61...80:
-                return .mint
-            case 41...60:
-                return .cyan
-            case 21...40:
-                return .teal 
-            default:
-                return .gray
-            }
+    private func happinessColor(for happiness: Int) -> Color {
+        switch happiness {
+        case 81...100:
+            return .indigo
+        case 61...80:
+            return .mint
+        case 41...60:
+            return .cyan
+        case 21...40:
+            return .teal
+        default:
+            return .gray
         }
+    }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-
-                // MARK: – Header
+                // Header, Pet Portrait, Stats, and Action Buttons remain the same
+                // ...
+                 // MARK: – Header
                 VStack(spacing: 12) {
-                    Text("Island Pet – \(pet.name)")
+                    Text("Island Pet – \(pet.name)")
                         .font(.largeTitle.bold())
                 }
 
@@ -83,7 +102,7 @@ struct PetDashboardView: View {
                     Button {
                         Task { await startPet() }
                     } label: {
-                        Label("Start Live Activity", systemImage: "pawprint")
+                        Label("Start Live Activity", systemImage: "pawprint")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -105,7 +124,7 @@ struct PetDashboardView: View {
                     Button {
                         Task { await endPet() }
                     } label: {
-                        Label("Stop Live Activity", systemImage: "xmark.circle")
+                        Label("Stop Live Activity", systemImage: "xmark.circle")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -126,89 +145,47 @@ struct PetDashboardView: View {
             }
             .padding(24)
         }
+        .refreshable {
+            await fetchLatestPetState()
+        }
         .task {
-                    // When the view appears, check for any existing Live Activities
-                    // for this specific pet and reconnect to it.
-                    for activity in Activity<PetAttributes>.activities {
-                        if activity.attributes.petID == pet.id {
-                            await MainActor.run {
-                                currentActivity = activity
-                            }
-                            break // Found the activity, no need to check others
-                        }
-                    }
-                    
-                    // Then, fetch the initial state from the network.
-                    // This combines the logic from the old .onAppear block.
-                    do {
-                        let initial = try await Network.fetchPetState(petID: storedPetID)
-                        await MainActor.run {
-                            hunger = initial.hunger
-                            happiness = initial.happiness
-                        }
-                    } catch {
-                        print("❌ fetchPetState error:", error)
-                    }
+            for activity in Activity<PetAttributes>.activities {
+                if activity.attributes.petID == pet.id {
+                    await MainActor.run { currentActivity = activity }
+                    break
                 }
+            }
+            await fetchLatestPetState()
+        }
         .onChange(of: currentActivity?.content.state) { newState in
             if let state = newState {
-                print("🔄 onChange currentActivity content.state → hunger:", state.hunger, "happiness:", state.happiness)
-                hunger = state.hunger
-                happiness = state.happiness
+                updatePetState(hunger: state.hunger, happiness: state.happiness)
             }
-        }
-        .onChange(of: hunger) { newHunger in
-            print("🔄 hunger state changed to", newHunger)
-        }
-        .onChange(of: happiness) { newHappiness in
-            print("🔄 happiness state changed to", newHappiness)
         }
         .task(id: currentActivity?.id) {
             guard let activity = currentActivity else { return }
-            print("🐛 task observing updates for id:", activity.id)
             for await update in Activity<PetAttributes>.activityUpdates {
                 guard update.id == activity.id else { continue }
                 let state = update.contentState
-                print("📬 task got remote update → hunger:", state.hunger, "happiness:", state.happiness)
                 await MainActor.run {
-                    hunger = state.hunger
-                    happiness = state.happiness
+                    updatePetState(hunger: state.hunger, happiness: state.happiness)
                 }
             }
         }
-        .onReceive(Timer.publish(every: 5.0, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(Timer.publish(every: 600.0, on: .main, in: .common).autoconnect()) { _ in
             Task {
-                if let activity = currentActivity {
-                    // Update from Live Activity
-                    let state = activity.content.state
-                    print("⏰ Timer updating UI (Live Activity) → hunger:", state.hunger, "happiness:", state.happiness)
-                    hunger = state.hunger
-                    happiness = state.happiness
-                } else {
-                    // No Live Activity: fetch from server
-                    print("⏰ Timer fetching state from server for petID:", pet.id)
-                    do {
-                        let resp = try await Network.fetchPetState(petID: pet.id)
-                        print("⏰ Fetched server state → hunger:", resp.hunger, "happiness:", resp.happiness)
-                        hunger = resp.hunger
-                        happiness = resp.happiness
-                    } catch {
-                        print("❌ Timer fetchPetState error:", error)
-                    }
+                if currentActivity == nil {
+                    await fetchLatestPetState()
                 }
             }
         }
         .alert("End Pet?", isPresented: $showEndConfirmation) {
-            Button("End Pet", role: .destructive) {
-                Task { await endPetCompletely() }
-            }
+            Button("End Pet", role: .destructive) { Task { await endPetCompletely() } }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to permanently remove this pet? This cannot be undone.")
         }
     }
-
-    // MARK: – Sub‑views
 
     @ViewBuilder
     private func statRow(title: String, value: Int, tint: Color) -> some View {
@@ -225,9 +202,7 @@ struct PetDashboardView: View {
         }
     }
 
-    private func actionButton(_ title: String,
-                              systemImage: String,
-                              action: @escaping () -> Void) -> some View {
+    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .frame(maxWidth: .infinity)
@@ -237,70 +212,60 @@ struct PetDashboardView: View {
     }
 }
 
-// MARK: – Live-Activity helpers
+// MARK: – Network and Activity Helpers
 extension PetDashboardView {
+
+    // NEW: Centralized function to update both @State and @AppStorage
+    private func updatePetState(hunger: Int, happiness: Int) {
+        self.hunger = hunger
+        self.happiness = happiness
+        self.lastKnownHunger = hunger
+        self.lastKnownHappiness = happiness
+        print("🔄 Pet state updated and persisted: Hunger \(hunger), Happiness \(happiness)")
+    }
+
+    private func fetchLatestPetState() async {
+        print("⏰ Fetching latest pet state from server...")
+        do {
+            let resp = try await Network.fetchPetState(petID: pet.id)
+            await MainActor.run {
+                updatePetState(hunger: resp.hunger, happiness: resp.happiness)
+            }
+        } catch {
+            print("❌ fetchLatestPetState error:", error)
+        }
+    }
+
     @MainActor
     private func startPet() async {
-        print("🐛 startPet tapped")          // <-- add this
-          guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-              print("❌ Live Activities OFF in Settings")
-              return
-          }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         let attrs = PetAttributes(petID: pet.id, speciesID: pet.assetName)
         let contentState = PetAttributes.ContentState(happiness: happiness, hunger: hunger)
         let content = ActivityContent(state: contentState, staleDate: nil)
 
         do {
-            let activity = try Activity.request(
-                attributes: attrs,
-                content: content,
-                pushType: .token
-            )
+            let activity = try Activity.request(attributes: attrs, content: content, pushType: .token)
             currentActivity = activity
             
-            // Determine if this is a fresh start or restart
             let activityIDString = String(describing: activity.id)
             let isNewSession = storedSessionID.isEmpty || storedSessionID != activityIDString
-            if isNewSession {
-                print("[startPet] registering new session:", activityIDString)
-            } else {
-                print("[startPet] updating existing session ID:", activityIDString)
-            }
-            
             let newID = String(describing: activity.id)
+
             Task.detached {
                 var first = true
                 for await tokenData in activity.pushTokenUpdates {
                     do {
                         if first {
-                            // on first token update, register or rename session
                             if isNewSession {
-                                try await Network.registerPetSession(
-                                    activityID: activity.id,
-                                    token: tokenData.map { String(format: "%02x", $0) }.joined(),
-                                    petID: pet.id,
-                                    speciesID: pet.assetName
-                                )
-                                print("[startPet] registerPetSession success:", newID)
+                                try await Network.registerPetSession(activityID: activity.id, token: tokenData.map { String(format: "%02x", $0) }.joined(), petID: pet.id, speciesID: pet.assetName)
                             } else {
-                                try await Network.updateSessionActivityID(
-                                    oldActivityID: storedSessionID,
-                                    newActivityID: activity.id
-                                )
-                                print("[startPet] updateSessionActivityID success:", newID)
+                                try await Network.updateSessionActivityID(oldActivityID: storedSessionID, newActivityID: activity.id)
                             }
                             await MainActor.run { storedSessionID = newID }
                             first = false
                         } else {
-                            // subsequent token updates refresh token only
-                            try await Network.sendLiveActivityToken(
-                                tokenData,
-                                activityID: activity.id,
-                                petID: pet.id,
-                                speciesID: pet.assetName
-                            )
-                            print("[startPet] sendLiveActivityToken success for:", newID)
+                            try await Network.sendLiveActivityToken(tokenData, activityID: activity.id, petID: pet.id, speciesID: pet.assetName)
                         }
                     } catch {
                         print("❌ session registration/update error:", error)
@@ -313,76 +278,50 @@ extension PetDashboardView {
     }
 
     private func feedPet() async {
-        print("🐛 feedPet called")
         os_log("🍖 Feeding pet")
-
-        // 1. Compute new state locally
         let newHunger    = max(0, hunger - 25)
         let newHappiness = happiness
 
-        // 2. If a Live Activity exists, update it
         if let activity = currentActivity {
             var state = activity.content.state
             state.hunger = newHunger
             await activity.update(using: state)
-            print("📡 feedPet sent Activity update → hunger:", state.hunger, "happiness:", state.happiness)
         }
 
-        // 3. Notify backend of new pet state
-        print("📡 feedPet calling backend update → hunger:", newHunger, "happiness:", newHappiness)
         Task.detached {
             do {
-                try await Network.sendPetStateUpdate(
-                    petID: pet.id,
-                    hunger: newHunger,
-                    happiness: newHappiness
-                )
+                try await Network.sendPetStateUpdate(petID: pet.id, hunger: newHunger, happiness: newHappiness)
             } catch {
                 print("❌ sendPetStateUpdate error:", error)
             }
         }
 
-        // 4. Update local UI state
         await MainActor.run {
-            hunger    = newHunger
-            happiness = newHappiness
+            updatePetState(hunger: newHunger, happiness: newHappiness)
         }
     }
 
     private func playPet() async {
-        print("🐛 playPet called")
         os_log("🎮 Playing with pet")
-
-        // 1. Compute new state locally
         let newHunger    = hunger
         let newHappiness = min(100, happiness + 20)
 
-        // 2. If a Live Activity exists, update it
         if let activity = currentActivity {
             var state = activity.content.state
             state.happiness = newHappiness
             await activity.update(using: state)
-            print("📡 playPet sent Activity update → hunger:", state.hunger, "happiness:", state.happiness)
         }
 
-        // 3. Notify backend of new pet state
-        print("📡 playPet calling backend update → hunger:", newHunger, "happiness:", newHappiness)
         Task.detached {
             do {
-                try await Network.sendPetStateUpdate(
-                    petID: pet.id,
-                    hunger: newHunger,
-                    happiness: newHappiness
-                )
+                try await Network.sendPetStateUpdate(petID: pet.id, hunger: newHunger, happiness: newHappiness)
             } catch {
                 print("❌ sendPetStateUpdate error:", error)
             }
         }
 
-        // 4. Update local UI state
         await MainActor.run {
-            hunger    = newHunger
-            happiness = newHappiness
+            updatePetState(hunger: newHunger, happiness: newHappiness)
         }
     }
 
@@ -395,14 +334,12 @@ extension PetDashboardView {
     
     @MainActor
     private func endPetCompletely() async {
-        // 1. Notify backend to end the pet session
         if let activity = currentActivity {
             do {
                 try await Network.sendEndActivity(activityID: activity.id)
             } catch {
                 print("❌ sendEndActivity error:", error)
             }
-            // 2. End the Live Activity UI
             await activity.end(dismissalPolicy: .immediate)
             currentActivity = nil
         }
@@ -411,10 +348,7 @@ extension PetDashboardView {
         } catch {
             print("❌ clearAllData error:", error)
         }
-        // 3. Tell the widget to reload its timeline
-            WidgetCenter.shared.reloadTimelines(ofKind: "PetStatusWidget")
-
-            // 4. Navigate back to pet selection
-            onRehome()
+        WidgetCenter.shared.reloadTimelines(ofKind: "PetStatusWidget")
+        onRehome()
     }
 }
